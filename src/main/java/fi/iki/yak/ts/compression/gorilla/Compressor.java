@@ -64,7 +64,7 @@ public class Compressor {
             storedTimestamp = timestamp;
             storedVal = value;
 
-            writeBits(storedDelta, 14);
+            writeBits(storedDelta, 27);
             writeBits(Double.doubleToRawLongBits(storedVal), 64);
             System.out.println("First value was: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta);
         } else {
@@ -101,7 +101,8 @@ public class Compressor {
      */
     private void compressTimestamp(long timestamp) {
         // a) Calculate the delta of delta
-        long delta = (timestamp - storedTimestamp) - storedDelta;
+        long newDelta = (timestamp - storedTimestamp);
+        long delta = newDelta - storedDelta;
 
         // If delta is zero, write single 0 bit
         if(delta == 0) {
@@ -120,7 +121,7 @@ public class Compressor {
             writeBits(delta, 32); // Store delta using 32 bits
         }
 
-        storedDelta = delta;
+        storedDelta = newDelta;
         storedTimestamp = timestamp;
     }
 

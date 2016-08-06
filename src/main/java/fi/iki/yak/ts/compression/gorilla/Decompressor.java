@@ -24,16 +24,19 @@ public class Decompressor {
     public static void main(String[] args) {
         try {
             // Small silly test.. will remove after I write JUnit tests
-            long now = 1470424826103L;
+            long now = 1470424826100L;
             Compressor compressor = new Compressor(now);
             compressor.addValue(now + 10, 1.0);
             compressor.addValue(now + 20, 1.0);
             compressor.addValue(now + 31, 4.0);
             compressor.addValue(now + 42, 124.0);
+            compressor.addValue(now + 50, 126.0);
             compressor.Close();
 
             Decompressor decompressor = new Decompressor(compressor.getByteBuffer().array());
             Pair pair = decompressor.readPair();
+            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
+            pair = decompressor.readPair();
             System.out.println(pair.getTimestamp() + ";" + pair.getValue());
             pair = decompressor.readPair();
             System.out.println(pair.getTimestamp() + ";" + pair.getValue());
@@ -72,9 +75,8 @@ public class Decompressor {
 
         if (storedTimestamp == 0) {
             // First item to read
-            storedDelta = getLong(14);
-            long storedValLong = getLong(64);
-            storedVal = Double.longBitsToDouble(storedValLong);
+            storedDelta = getLong(27);
+            storedVal = Double.longBitsToDouble(getLong(64));
             storedTimestamp = blockTimestamp + storedDelta;
 
 //            System.out.println("First value: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta + ", long->" + storedValLong);
@@ -103,6 +105,11 @@ public class Decompressor {
             }
             if (toRead > 0) {
                 deltaDelta = getLong(toRead);
+
+                // Does not solve the issue either.. maybe I have something wrong in the compressor..
+//                if(deltaDelta > (1 << (toRead - 1))) {
+//                    deltaDelta = deltaDelta - (1 << toRead);
+//                }
             }
 
             if (deltaDelta == 0xFFFFFFFF) {
@@ -110,7 +117,10 @@ public class Decompressor {
                 return null;
             }
 
+            // Negative values of deltaDelta are not handled correctly
+
             storedDelta = storedDelta + deltaDelta;
+            System.out.printf("StoredDelta->%d, deltaDelta->%d\n", storedDelta, deltaDelta);
             storedTimestamp = storedDelta + storedTimestamp;
 
             // Read value
@@ -165,6 +175,7 @@ public class Decompressor {
             }
             flipByte();
         }
+
         return value;
     }
 }
