@@ -86,6 +86,8 @@ public class Compressor {
 
     // TODO I need an int64 version of this also.. we're not always compressing doubles
 
+    // TODO Split timestamp compression & value compression, might want to use different timestamp compression for example
+
     private void addHeader(long timestamp) {
         // One byte: length of the first delta
         // One byte: precision of timestamps
@@ -105,7 +107,7 @@ public class Compressor {
         } else {
             compressTimestamp(timestamp);
             compressValue(value);
-            System.out.println("Next value was: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta);
+            System.out.println("Value was: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta);
         }
     }
 
@@ -139,20 +141,23 @@ public class Compressor {
         long newDelta = (timestamp - storedTimestamp);
         long delta = newDelta - storedDelta;
 
-        if(delta < 0) {
-            System.out.printf("Writing negative delta-delta, %d\n", delta);
-        }
+//        if(delta < 0) {
+//            System.out.printf("Writing delta-delta->%d\n", delta);
+//        }
         // If delta is zero, write single 0 bit
         if(delta == 0) {
+            System.out.printf("Writing '0', no changes to delta-delta, %d\n", delta);
             writeBit(false);
         } else if(delta >= -63 && delta <= 64) {
             System.out.printf("Writing case a delta-delta + '10', %d\n", delta);
             writeBits(0x02, 2); // store '10'
             writeBits(delta, 7); // Using 7 bits, store the value..
         } else if(delta >= -255 && delta <= 256) {
+            System.out.printf("Writing case a delta-delta + '110', %d\n", delta);
             writeBits(0x06, 3); // store '110'
             writeBits(delta, 9); // Use 9 bits
         } else if(delta >= -2047 && delta <= 2048) {
+            System.out.printf("Writing case a delta-delta + '1110', %d\n", delta);
             writeBits(0x0E, 4); // store '1110'
             writeBits(delta, 12); // Use 12 bits
         } else {
@@ -189,7 +194,7 @@ public class Compressor {
                 // + store the meaningful XORed value
                 int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
                 writeBits(xor >> trailingZeros, significantBits);
-                System.out.printf("Wrote %d with only XOR with %d bits\n", xor >> trailingZeros, significantBits);
+//                System.out.printf("Wrote %d with only XOR with %d bits\n", xor >> trailingZeros, significantBits);
             } else {
                 // store the length of the number of leading zeros in the next 5 bits
                 // + store length of the meaningful XORed value in the next 6 bits,
@@ -204,7 +209,7 @@ public class Compressor {
 
                 storedLeadingZeros = leadingZeros;
                 storedTrailingZeros = trailingZeros;
-                System.out.printf("Wrote %d->%d->%d, %d with %d bits\n", leadingZeros, significantBits, trailingZeros, xor >> trailingZeros, significantBits);
+//                System.out.printf("Wrote %d->%d->%d, %d with %d bits\n", leadingZeros, significantBits, trailingZeros, xor >> trailingZeros, significantBits);
 //                System.out.printf("DOUBLE: %64s\n", Long.toBinaryString(Double.doubleToRawLongBits(value)));
 //                System.out.printf("XOR: %64s\n", Long.toBinaryString(xor));
             }
@@ -259,24 +264,26 @@ public class Compressor {
 
         while(remaining > 0) {
             int shift = remaining - bitsLeft;
+            // TODO Should I optimize the 0 shift case?
+            if(shift > 0) {
+                byte d = (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
+//                byte d = (byte) ((value >> 59) & ((1 << 5) - 1));
+//                b |= (byte) (value >> shift);
+                b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
+                System.out.printf("writeBits positive, bitsLeft->%d, shifted->%d, d-> %8s\n", bitsLeft, shift, Integer.toBinaryString((d & 0xFF) + 0x100).substring(1));
+//                b |= (byte) ((value >> shift) & ((1<<bitsLeft)-1));
+            } else {
+                int shiftAmount = Math.abs(shift);
+                b |= (byte) (value << shiftAmount);
+                System.out.printf("writeBits negative, shifted->%d, b-> %8s\n", shiftAmount, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
+//                b |= (byte) ((value << shiftAmount) & ((1<<8)-1));
+            }
             if(remaining > bitsLeft) {
                 remaining -= bitsLeft;
                 bitsLeft = 0;
             } else {
                 bitsLeft -= remaining;
                 remaining = 0;
-            }
-            // TODO Should I optimize the 0 shift case?
-            if(shift > 0) {
-                byte d = (byte) (value >> shift);
-                b |= (byte) (value >> shift);
-                System.out.printf("writeBits positive, shifted->%d, d-> %8s\n", shift, Integer.toBinaryString((d & 0xFF) + 0x100).substring(1));
-//                b |= (byte) ((value >> shift) & ((1<<8)-1));
-            } else {
-                int shiftAmount = Math.abs(shift);
-                b |= (byte) (value << shiftAmount);
-//                System.out.printf("writeBits negative, shifted->%d, b-> %8s\n", shiftAmount, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
-//                b |= (byte) ((value << shiftAmount) & ((1<<8)-1));
             }
             flipByte();
         }
