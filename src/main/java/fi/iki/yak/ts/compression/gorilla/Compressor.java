@@ -24,39 +24,6 @@ public class Compressor {
     private ByteBuffer bb;
     private byte b;
     private int bitsLeft = Byte.SIZE;
-    private int totalBits = 0;
-
-    public static void main(String[] args) {
-        long now = 1470424826100L;
-        Compressor c = new Compressor(now);
-        // TODO Note that same timestamp can't receive multiple values.. or at least we have a bug then..
-//        c.addValue(now + 11, 5.0);
-//        c.addValue(now + 22, -13.0);
-//        c.addValue(now + 33, 37.0);
-//        c.addValue(now + 44, -1.0);
-
-        c.addValue(now + 11, -145.0);
-        c.addValue(now + 22, -178.0);
-        c.addValue(now + 33, 137.0);
-        c.addValue(now + 44, -176.0);
-
-        c.Close();
-
-        try {
-            Decompressor decompressor = new Decompressor(c.getByteBuffer().array());
-            Pair pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     // We should have access to the series?
 
@@ -103,23 +70,23 @@ public class Compressor {
 
             writeBits(storedDelta, FIRST_DELTA_BITS);
             writeBits(Double.doubleToRawLongBits(storedVal), 64);
-            System.out.println("First value was: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta);
+//            System.out.println("First value was: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta);
         } else {
             compressTimestamp(timestamp);
             compressValue(value);
-            System.out.println("Value was: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta);
+//            System.out.println("Value was: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta);
         }
     }
 
-    public void Close() {
-        // Close the bytebuffers.. and write something so we know next time it's done?
+    public void close() {
+        // close the bytebuffers.. and write something so we know next time it's done?
 
         // These are selected to test interoperability and correctness of the solution, this can be read with go-tsz
         writeBits(0x0F, 4);
         writeBits(0xFFFFFFFF, 32);
         writeBit(false);
-        System.out.printf("Wrote a total of %d bits, which is about %d bytes\n", totalBits, (totalBits / 8));
-        System.out.printf("BB: pos->%d, cap->%d\n", bb.position(), bb.capacity());
+//        System.out.printf("Wrote a total of %d bits, which is about %d bytes\n", totalBits, (totalBits / 8));
+//        System.out.printf("BB: pos->%d, cap->%d\n", bb.position(), bb.capacity());
     }
 
     public ByteBuffer getByteBuffer() {
@@ -146,22 +113,22 @@ public class Compressor {
 //        }
         // If delta is zero, write single 0 bit
         if(delta == 0) {
-            System.out.printf("Writing '0', no changes to delta-delta, %d\n", delta);
+//            System.out.printf("Writing '0', no changes to delta-delta, %d\n", delta);
             writeBit(false);
         } else if(delta >= -63 && delta <= 64) {
-            System.out.printf("Writing case a delta-delta + '10', %d\n", delta);
+//            System.out.printf("Writing case a delta-delta + '10', %d\n", delta);
             writeBits(0x02, 2); // store '10'
             writeBits(delta, 7); // Using 7 bits, store the value..
         } else if(delta >= -255 && delta <= 256) {
-            System.out.printf("Writing case a delta-delta + '110', %d\n", delta);
+//            System.out.printf("Writing case a delta-delta + '110', %d\n", delta);
             writeBits(0x06, 3); // store '110'
             writeBits(delta, 9); // Use 9 bits
         } else if(delta >= -2047 && delta <= 2048) {
-            System.out.printf("Writing case a delta-delta + '1110', %d\n", delta);
+//            System.out.printf("Writing case a delta-delta + '1110', %d\n", delta);
             writeBits(0x0E, 4); // store '1110'
             writeBits(delta, 12); // Use 12 bits
         } else {
-            System.out.printf("Writing case full-delta 32 bits + '1111', %d\n", delta);
+//            System.out.printf("Writing case full-delta 32 bits + '1111', %d\n", delta);
             writeBits(0x0F, 4); // Store '1111'
             writeBits(delta, 32); // Store delta using 32 bits
         }
@@ -181,6 +148,10 @@ public class Compressor {
             int trailingZeros = Long.numberOfTrailingZeros(xor);
 
             // Check overflow of leading? Can't be 32!
+
+            if(leadingZeros >= 32) {
+                leadingZeros = 31;
+            }
 
             // Store bit '1'
             writeBit(true);
@@ -220,7 +191,7 @@ public class Compressor {
 
     private void flipByte() {
         if(bitsLeft == 0) {
-            System.out.printf("Writing b-> %8s\n", Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
+//            System.out.printf("Writing b-> %8s\n", Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
             bb.put(b);
             if(!bb.hasRemaining()) {
                 // TODO We need a new allocation
@@ -233,12 +204,11 @@ public class Compressor {
     }
 
     private void writeBit(boolean bit) { // Why int here..? Something else perhaps? boolean stinks too :(
-        totalBits++; // debug only
         if(bit) {
             b |= (1 << (bitsLeft - 1));
         }
         bitsLeft--;
-        System.out.printf("Wrote %b, bitsLeft: %d, b ->%8s\n", bit, bitsLeft, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
+//        System.out.printf("Wrote %b, bitsLeft: %d, b ->%8s\n", bit, bitsLeft, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
         flipByte();
     }
 
@@ -246,15 +216,14 @@ public class Compressor {
     private void writeBits(long value, int bits) {
 //        value &= 0x00000000ffffffffL;
 //        value <<= (Long.SIZE - bits);
-        System.out.printf("Requested to write non-modified value->%d, bits->%d, bitsLeft->%d, bValue->%64s\n", value, bits, bitsLeft, Long.toUnsignedString(value, 2));
+//        System.out.printf("Requested to write non-modified value->%d, bits->%d, bitsLeft->%d, bValue->%64s\n", value, bits, bitsLeft, Long.toUnsignedString(value, 2));
         if(value < 0 && bits < Long.SIZE) {
             // Is this adding extra digit?
             value = (value & (long) ((1 << bits) - 1));
         }
-        totalBits += bits;
         int remaining = bits; // Unnecessary, just use bits
 
-        System.out.printf("Requested to write value->%d, bits->%d, bitsLeft->%d, bValue->%64s\n", value, bits, bitsLeft, Long.toUnsignedString(value, 2));
+//        System.out.printf("Requested to write value->%d, bits->%d, bitsLeft->%d, bValue->%64s\n", value, bits, bitsLeft, Long.toUnsignedString(value, 2));
 
 //        System.out.printf("Writing orig->%d, unsigned->%s\n", value, Long.toUnsignedString(value));
 //        System.out.printf("Write LongValue->%64s\n", Long.toBinaryString(value));
@@ -270,12 +239,12 @@ public class Compressor {
 //                byte d = (byte) ((value >> 59) & ((1 << 5) - 1));
 //                b |= (byte) (value >> shift);
                 b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
-                System.out.printf("writeBits positive, bitsLeft->%d, shifted->%d, d-> %8s\n", bitsLeft, shift, Integer.toBinaryString((d & 0xFF) + 0x100).substring(1));
+//                System.out.printf("writeBits positive, bitsLeft->%d, shifted->%d, d-> %8s\n", bitsLeft, shift, Integer.toBinaryString((d & 0xFF) + 0x100).substring(1));
 //                b |= (byte) ((value >> shift) & ((1<<bitsLeft)-1));
             } else {
                 int shiftAmount = Math.abs(shift);
                 b |= (byte) (value << shiftAmount);
-                System.out.printf("writeBits negative, shifted->%d, b-> %8s\n", shiftAmount, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
+//                System.out.printf("writeBits negative, shifted->%d, b-> %8s\n", shiftAmount, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
 //                b |= (byte) ((value << shiftAmount) & ((1<<8)-1));
             }
             if(remaining > bitsLeft) {

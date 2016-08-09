@@ -19,43 +19,6 @@ public class Decompressor {
 
     private long blockTimestamp = 0;
 
-    // This could be in the same class as Compressor.. but .. meeh
-
-    public static void main(String[] args) {
-        try {
-            // Small silly test.. will remove after I write JUnit tests
-            long now = 1470424826100L;
-            Compressor compressor = new Compressor(now);
-            compressor.addValue(now + 10, 1.0);
-            compressor.addValue(now + 20, 3.0);
-            compressor.addValue(now + 31, 4.0);
-            compressor.addValue(now + 42, 124.0);
-            compressor.addValue(now + 53, 8192.0);
-            compressor.addValue(now + 64, 65537.0);
-            compressor.addValue(now + 75, 2147483650.0);
-            compressor.addValue(now + 86, 65537.0);
-            compressor.Close();
-
-            Decompressor decompressor = new Decompressor(compressor.getByteBuffer().array());
-            Pair pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-            pair = decompressor.readPair();
-            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public Decompressor(byte[] data) throws IOException {
         bb = ByteBuffer.wrap(data);
         flipByte();
@@ -74,7 +37,7 @@ public class Decompressor {
     private void flipByte() {
         if (bitsLeft == 0) {
             b = bb.get();
-            System.out.printf("Reading b-> %8s\n", Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
+//            System.out.printf("Reading b-> %8s\n", Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
             bitsLeft = Byte.SIZE;
         }
     }
@@ -86,9 +49,6 @@ public class Decompressor {
             storedDelta = getLong(Compressor.FIRST_DELTA_BITS);
             storedVal = Double.longBitsToDouble(getLong(64));
             storedTimestamp = blockTimestamp + storedDelta;
-
-//            System.out.println("First value: timestamp->" + storedTimestamp + ", val->" + storedVal + ", delta->" + storedDelta + ", long->" + storedValLong);
-
         } else {
             // Next, read timestamp
             // TODO Read 4 bits and then use the extra bits for the next values
@@ -112,13 +72,12 @@ public class Decompressor {
                 }
             }
             if (toRead > 0) {
-                System.out.printf("Reading %d bits\n", toRead);
                 deltaDelta = getLong(toRead);
 
-                // Does not solve the issue either.. maybe I have something wrong in the compressor..
-//                if(deltaDelta > (1 << (toRead - 1))) {
-//                    deltaDelta = deltaDelta - (1 << toRead);
-//                }
+                // Turn "unsigned" long value back to signed one
+                if(deltaDelta > (1 << (toRead - 1))) {
+                    deltaDelta -= (1 << toRead);
+                }
             }
 
             if (deltaDelta == 0xFFFFFFFF) {
@@ -129,7 +88,7 @@ public class Decompressor {
             // Negative values of deltaDelta are not handled correctly. actually nothing negative is.. ugh
 
             storedDelta = storedDelta + deltaDelta;
-            System.out.printf("StoredDelta->%d, deltaDelta->%d\n", storedDelta, deltaDelta);
+//            System.out.printf("StoredDelta->%d, deltaDelta->%d\n", storedDelta, deltaDelta);
             storedTimestamp = storedDelta + storedTimestamp;
 
             // Read value
@@ -156,12 +115,9 @@ public class Decompressor {
     }
 
     private boolean readBit() {
-        System.out.printf("readBit, bitsLeft->%d, b-> %8s\n", bitsLeft, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
+//        System.out.printf("readBit, bitsLeft->%d, b-> %8s\n", bitsLeft, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
         byte bit = (byte) ((b >> (bitsLeft - 1)) & 1);
-
-//        System.out.printf("Read ")
-
-        System.out.printf("readBit, bit-> %8s\n", Integer.toBinaryString((bit & 0xFF) + 0x100).substring(1));
+//        System.out.printf("readBit, bit-> %8s\n", Integer.toBinaryString((bit & 0xFF) + 0x100).substring(1));
 
         bitsLeft--;
         flipByte();
@@ -175,8 +131,8 @@ public class Decompressor {
                 // Take only the bitsLeft "least significant" bits
                 byte d = (byte) (b & ((1<<bitsLeft) - 1));
                 value = (value << bitsLeft) + (d & 0xFF);
-                System.out.printf("getLong primary, value->%d, b-> %8s\n", value, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
-                System.out.printf("getLong primary, d-> %8s\n", Integer.toBinaryString((d & 0xFF) + 0x100).substring(1));
+//                System.out.printf("getLong primary, value->%d, b-> %8s\n", value, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
+//                System.out.printf("getLong primary, d-> %8s\n", Integer.toBinaryString((d & 0xFF) + 0x100).substring(1));
                 bits -= bitsLeft;
                 bitsLeft = 0;
             } else {
@@ -190,7 +146,7 @@ public class Decompressor {
             flipByte();
         }
 
-        System.out.printf("Returning %d\n", value);
+//        System.out.printf("Returning %d\n", value);
         return value;
     }
 }
