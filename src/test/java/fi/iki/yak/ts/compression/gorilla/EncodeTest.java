@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * @author Michael Burman
@@ -44,6 +45,8 @@ public class EncodeTest {
             assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match");
             assertEquals(pairs[i].getValue(), pair.getValue(), "Value did not match");
         }
+
+        assertNull(d.readPair());
     }
 
     @Test
@@ -72,5 +75,6 @@ public class EncodeTest {
             assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match");
             assertEquals(pairs[i].getValue(), pair.getValue(), "Value did not match");
         }
+        assertNull(d.readPair());
     }
 }

@@ -28,7 +28,7 @@ public class Compressor {
 
     public Compressor(long timestamp) {
         blockTimestamp = timestamp;
-        bb = ByteBuffer.allocate(1024); // Allocate 1024 bytes .. expand when needed or something
+        bb = ByteBuffer.allocate(1048576); // Allocate 1024 bytes .. expand when needed or something
         b = bb.get(0);
         addHeader(timestamp);
     }
@@ -76,12 +76,12 @@ public class Compressor {
     }
 
     public void close() {
-        // close the bytebuffers.. and write something so we know next time it's done?
-
         // These are selected to test interoperability and correctness of the solution, this can be read with go-tsz
         writeBits(0x0F, 4);
         writeBits(0xFFFFFFFF, 32);
         writeBit(false);
+        bitsLeft = 0;
+        flipByte(); // Causes write to the ByteBuffer
     }
 
     public ByteBuffer getByteBuffer() {
@@ -125,6 +125,7 @@ public class Compressor {
     }
 
     private void compressValue(double value) {
+        // TODO Fix already compiled into a big method
         long xor = Double.doubleToRawLongBits(storedVal) ^ Double.doubleToRawLongBits(value);
 
         if(xor == 0) {
@@ -135,7 +136,6 @@ public class Compressor {
             int trailingZeros = Long.numberOfTrailingZeros(xor);
 
             // Check overflow of leading? Can't be 32!
-
             if(leadingZeros >= 32) {
                 leadingZeros = 31;
             }
@@ -175,7 +175,7 @@ public class Compressor {
             bb.put(b);
             if(!bb.hasRemaining()) {
                 // TODO We need a new allocation
-                throw new RuntimeException("Temporarily fail for testing purposes");
+//                throw new RuntimeException("Temporarily fail for testing purposes");
             } else {
                 b = bb.get(bb.position());
                 bitsLeft = Byte.SIZE;
@@ -193,6 +193,7 @@ public class Compressor {
 
 
     private void writeBits(long value, int bits) {
+        // TODO Fix already compiled into a medium method
         while(bits > 0) {
             int shift = bits - bitsLeft;
             // TODO Should I optimize the 0 shift case?

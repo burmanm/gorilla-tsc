@@ -73,17 +73,19 @@ public class Decompressor {
             if (toRead > 0) {
                 deltaDelta = getLong(toRead);
 
-                // Turn "unsigned" long value back to signed one
-                if(toRead < 32 && deltaDelta > (1 << (toRead - 1))) {
-                    deltaDelta -= (1 << toRead);
+                if(toRead == 32) {
+                    if ((int) deltaDelta == 0xFFFFFFFF) {
+                        // End of stream
+                        return null;
+                    }
+                } else {
+                    // Turn "unsigned" long value back to signed one
+                    if(deltaDelta > (1 << (toRead - 1))) {
+                        deltaDelta -= (1 << toRead);
+                    }
                 }
+
                 deltaDelta = (int) deltaDelta;
-
-            }
-
-            if (deltaDelta == 0xFFFFFFFF) {
-                // End of stream
-                return null;
             }
 
             // Negative values of deltaDelta are not handled correctly. actually nothing negative is.. ugh
