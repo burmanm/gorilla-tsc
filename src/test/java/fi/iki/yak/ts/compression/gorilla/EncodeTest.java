@@ -3,6 +3,7 @@ package fi.iki.yak.ts.compression.gorilla;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -10,7 +11,7 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Created by michael on 8/9/16.
+ * @author Michael Burman
  */
 public class EncodeTest {
 
@@ -24,6 +25,7 @@ public class EncodeTest {
         Pair[] pairs = {
                 new Pair(now + 10, 1.0),
                 new Pair(now + 20, -2.0),
+                new Pair(now + 28, -2.5),
                 new Pair(now + 84, 65537),
                 new Pair(now + 400, 2147483650.0),
                 new Pair(now + 2300, -16384),
@@ -39,7 +41,6 @@ public class EncodeTest {
         // Replace with stream once decompressor supports it
         for(int i = 0; i < pairs.length; i++) {
             Pair pair = d.readPair();
-//            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
             assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match");
             assertEquals(pairs[i].getValue(), pair.getValue(), "Value did not match");
         }
@@ -48,8 +49,7 @@ public class EncodeTest {
     @Test
     void testEncodeSimilarFloats() throws Exception {
         // See https://github.com/dgryski/go-tsz/issues/4
-        long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
-                .toInstant(ZoneOffset.UTC).toEpochMilli();
+        long now = LocalDateTime.of(2015, Month.MARCH, 02, 00, 00).toInstant(ZoneOffset.UTC).toEpochMilli();
 
         Compressor c = new Compressor(now);
 
@@ -69,7 +69,6 @@ public class EncodeTest {
         // Replace with stream once decompressor supports it
         for(int i = 0; i < pairs.length; i++) {
             Pair pair = d.readPair();
-//            System.out.println(pair.getTimestamp() + ";" + pair.getValue());
             assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match");
             assertEquals(pairs[i].getValue(), pair.getValue(), "Value did not match");
         }

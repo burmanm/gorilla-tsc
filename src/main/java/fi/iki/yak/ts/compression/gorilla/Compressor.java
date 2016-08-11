@@ -193,13 +193,8 @@ public class Compressor {
 
 
     private void writeBits(long value, int bits) {
-        int remaining = bits; // Unnecessary, just use bits
-
-        // TODO If the value is negative, this isn't working correctly..
-        // We need to append the interesting data to the end and then return it.. would have been simpler with the data in the most meaningful bits..
-
-        while(remaining > 0) {
-            int shift = remaining - bitsLeft;
+        while(bits > 0) {
+            int shift = bits - bitsLeft;
             // TODO Should I optimize the 0 shift case?
             if(shift > 0) {
                 b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
@@ -207,12 +202,12 @@ public class Compressor {
                 int shiftAmount = Math.abs(shift);
                 b |= (byte) (value << shiftAmount);
             }
-            if(remaining > bitsLeft) {
-                remaining -= bitsLeft;
+            if(bits > bitsLeft) {
+                bits -= bitsLeft;
                 bitsLeft = 0;
             } else {
-                bitsLeft -= remaining;
-                remaining = 0;
+                bitsLeft -= bits;
+                bits = 0;
             }
             flipByte();
         }
