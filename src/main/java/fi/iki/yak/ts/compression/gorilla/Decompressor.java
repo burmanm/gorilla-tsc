@@ -37,7 +37,6 @@ public class Decompressor {
     private void flipByte() {
         if (bitsLeft == 0) {
             b = bb.get();
-//            System.out.printf("Reading b-> %8s\n", Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
             bitsLeft = Byte.SIZE;
         }
     }
@@ -51,7 +50,7 @@ public class Decompressor {
             storedTimestamp = blockTimestamp + storedDelta;
         } else {
             // Next, read timestamp
-            // TODO Read 4 bits and then use the extra bits for the next values
+            // TODO Read 4 bits and then return the unused extra bits for the next values.. or something
             long deltaDelta = 0;
             byte toRead = 0;
             if (readBit()) {
@@ -75,9 +74,11 @@ public class Decompressor {
                 deltaDelta = getLong(toRead);
 
                 // Turn "unsigned" long value back to signed one
-                if(deltaDelta > (1 << (toRead - 1))) {
+                if(toRead < 32 && deltaDelta > (1 << (toRead - 1))) {
                     deltaDelta -= (1 << toRead);
                 }
+                deltaDelta = (int) deltaDelta;
+
             }
 
             if (deltaDelta == 0xFFFFFFFF) {
@@ -88,7 +89,6 @@ public class Decompressor {
             // Negative values of deltaDelta are not handled correctly. actually nothing negative is.. ugh
 
             storedDelta = storedDelta + deltaDelta;
-//            System.out.printf("StoredDelta->%d, deltaDelta->%d\n", storedDelta, deltaDelta);
             storedTimestamp = storedDelta + storedTimestamp;
 
             // Read value
@@ -99,15 +99,15 @@ public class Decompressor {
                     storedLeadingZeros = (int) getLong(5);
 
                     byte significantBits = (byte) getLong(6);
+                    if(significantBits == 0) {
+                        significantBits = 64;
+                    }
                     storedTrailingZeros = 64 - significantBits - storedLeadingZeros;
-//                    System.out.printf("Reading value %d-%d with %d bits\n", storedLeadingZeros, significantBits, (64 - storedLeadingZeros - storedTrailingZeros));
                 }
                 long value = getLong(64 - storedLeadingZeros - storedTrailingZeros);
-//                System.out.printf("Reading value %d with %d->%d\n", value, storedLeadingZeros, storedTrailingZeros);
                 value <<= storedTrailingZeros;
-                value = Double.doubleToRawLongBits(storedVal) ^ value;
+                value = Double.doubleToRawLongBits(storedVal) ^ value; // Would it make more sense to keep the rawLongBits in the memory than redo it?
                 storedVal = Double.longBitsToDouble(value);
-//                System.out.printf("Read value %f\n", storedVal);
             }
         }
 
@@ -115,10 +115,7 @@ public class Decompressor {
     }
 
     private boolean readBit() {
-//        System.out.printf("readBit, bitsLeft->%d, b-> %8s\n", bitsLeft, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
         byte bit = (byte) ((b >> (bitsLeft - 1)) & 1);
-//        System.out.printf("readBit, bit-> %8s\n", Integer.toBinaryString((bit & 0xFF) + 0x100).substring(1));
-
         bitsLeft--;
         flipByte();
         return bit == 1;
@@ -131,8 +128,6 @@ public class Decompressor {
                 // Take only the bitsLeft "least significant" bits
                 byte d = (byte) (b & ((1<<bitsLeft) - 1));
                 value = (value << bitsLeft) + (d & 0xFF);
-//                System.out.printf("getLong primary, value->%d, b-> %8s\n", value, Integer.toBinaryString((b & 0xFF) + 0x100).substring(1));
-//                System.out.printf("getLong primary, d-> %8s\n", Integer.toBinaryString((d & 0xFF) + 0x100).substring(1));
                 bits -= bitsLeft;
                 bitsLeft = 0;
             } else {
@@ -145,8 +140,6 @@ public class Decompressor {
             }
             flipByte();
         }
-
-//        System.out.printf("Returning %d\n", value);
         return value;
     }
 }
