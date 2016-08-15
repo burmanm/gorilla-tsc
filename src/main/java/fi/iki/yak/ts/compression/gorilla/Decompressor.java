@@ -19,6 +19,12 @@ public class Decompressor {
 
     private long blockTimestamp = 0;
 
+    public Decompressor(ByteBuffer byteB) throws IOException {
+        bb = byteB;
+        flipByte();
+        readHeader();
+    }
+
     public Decompressor(byte[] data) throws IOException {
         bb = ByteBuffer.wrap(data);
         flipByte();

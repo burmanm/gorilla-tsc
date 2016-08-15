@@ -2,6 +2,7 @@ package fi.iki.yak.ts.compression.gorilla;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneOffset;
@@ -37,7 +38,9 @@ public class EncodeTest {
         Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getValue()));
         c.close();
 
-        Decompressor d = new Decompressor(c.getByteBuffer().array());
+        ByteBuffer byteBuffer = c.getByteBuffer();
+        byteBuffer.flip();
+        Decompressor d = new Decompressor(byteBuffer);
 
         // Replace with stream once decompressor supports it
         for(int i = 0; i < pairs.length; i++) {
@@ -67,13 +70,57 @@ public class EncodeTest {
         Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getValue()));
         c.close();
 
-        Decompressor d = new Decompressor(c.getByteBuffer().array());
+        ByteBuffer byteBuffer = c.getByteBuffer();
+        byteBuffer.flip();
+        Decompressor d = new Decompressor(byteBuffer);
 
         // Replace with stream once decompressor supports it
         for(int i = 0; i < pairs.length; i++) {
             Pair pair = d.readPair();
             assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match");
             assertEquals(pairs[i].getValue(), pair.getValue(), "Value did not match");
+        }
+        assertNull(d.readPair());
+    }
+
+    @Test
+    void testEncodeLargeAmountOfData() throws Exception {
+        // This test should trigger ByteBuffer reallocation
+        int amountOfPoints = 1000;
+        long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
+                .toInstant(ZoneOffset.UTC).toEpochMilli();
+
+        long now = blockStart + 60;
+        ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);
+
+        for(int i = 0; i < amountOfPoints; i++) {
+            bb.putLong(now + i*60);
+            bb.putDouble(i * Math.random());
+        }
+
+        Compressor c = new Compressor(blockStart);
+
+        bb.flip();
+
+        for(int j = 0; j < amountOfPoints; j++) {
+            c.addValue(bb.getLong(), bb.getDouble());
+        }
+
+        c.close();
+
+        bb.flip();
+
+        ByteBuffer byteBuffer = c.getByteBuffer();
+        byteBuffer.flip();
+
+        Decompressor d = new Decompressor(byteBuffer);
+
+        for(int i = 0; i < amountOfPoints; i++) {
+            long tStamp = bb.getLong();
+            double val = bb.getDouble();
+            Pair pair = d.readPair();
+            assertEquals(tStamp, pair.getTimestamp(), "Expected timestamp did not match at point " + i);
+            assertEquals(val, pair.getValue());
         }
         assertNull(d.readPair());
     }

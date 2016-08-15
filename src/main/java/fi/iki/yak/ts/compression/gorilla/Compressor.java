@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
  */
 public class Compressor {
 
+    private static final int DEFAULT_ALLOCATION = 4096;
     private int storedLeadingZeros = Integer.MAX_VALUE;
     private int storedTrailingZeros = 0;
     private double storedVal = 0;
@@ -28,7 +29,7 @@ public class Compressor {
 
     public Compressor(long timestamp) {
         blockTimestamp = timestamp;
-        bb = ByteBuffer.allocate(1048576); // Allocate 1024 bytes .. expand when needed or something
+        bb = ByteBuffer.allocateDirect(DEFAULT_ALLOCATION);
         b = bb.get(0);
         addHeader(timestamp);
     }
@@ -174,16 +175,19 @@ public class Compressor {
         if(bitsLeft == 0) {
             bb.put(b);
             if(!bb.hasRemaining()) {
-                // TODO We need a new allocation
-//                throw new RuntimeException("Temporarily fail for testing purposes");
-            } else {
-                b = bb.get(bb.position());
-                bitsLeft = Byte.SIZE;
+//                ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity() + DEFAULT_ALLOCATION);
+                ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity()*2);
+                bb.flip();
+                largerBB.put(bb);
+                largerBB.position(bb.capacity());
+                bb = largerBB;
             }
+            b = bb.get(bb.position());
+            bitsLeft = Byte.SIZE;
         }
     }
 
-    private void writeBit(boolean bit) { // Why int here..? Something else perhaps? boolean stinks too :(
+    private void writeBit(boolean bit) {
         if(bit) {
             b |= (1 << (bitsLeft - 1));
         }
