@@ -10,7 +10,6 @@ import java.nio.ByteBuffer;
  */
 public class Compressor {
 
-    private static final int DEFAULT_ALLOCATION = 4096;
     private int storedLeadingZeros = Integer.MAX_VALUE;
     private int storedTrailingZeros = 0;
     private double storedVal = 0;
@@ -19,18 +18,14 @@ public class Compressor {
 
     private long blockTimestamp = 0;
 
-    public final static int FIRST_DELTA_BITS = 27;
+    public final static short FIRST_DELTA_BITS = 27;
 
-    private ByteBuffer bb;
-    private byte b;
-    private int bitsLeft = Byte.SIZE;
+    private BitOutput out;
 
     // We should have access to the series?
-
-    public Compressor(long timestamp) {
+    public Compressor(long timestamp, BitOutput output) {
         blockTimestamp = timestamp;
-        bb = ByteBuffer.allocateDirect(DEFAULT_ALLOCATION);
-        b = bb.get(0);
+        out = output;
         addHeader(timestamp);
     }
 
@@ -58,7 +53,7 @@ public class Compressor {
     private void addHeader(long timestamp) {
         // One byte: length of the first delta
         // One byte: precision of timestamps
-        writeBits(timestamp, 64);
+        out.writeBits(timestamp, 64);
     }
 
     public void addValue(long timestamp, double value) {
@@ -68,8 +63,8 @@ public class Compressor {
             storedTimestamp = timestamp;
             storedVal = value;
 
-            writeBits(storedDelta, FIRST_DELTA_BITS);
-            writeBits(Double.doubleToRawLongBits(storedVal), 64);
+            out.writeBits(storedDelta, FIRST_DELTA_BITS);
+            out.writeBits(Double.doubleToRawLongBits(storedVal), 64);
         } else {
             compressTimestamp(timestamp);
             compressValue(value);
@@ -78,15 +73,10 @@ public class Compressor {
 
     public void close() {
         // These are selected to test interoperability and correctness of the solution, this can be read with go-tsz
-        writeBits(0x0F, 4);
-        writeBits(0xFFFFFFFF, 32);
-        writeBit(false);
-        bitsLeft = 0;
-        flipByte(); // Causes write to the ByteBuffer
-    }
-
-    public ByteBuffer getByteBuffer() {
-        return this.bb;
+        out.writeBits(0x0F, 4);
+        out.writeBits(0xFFFFFFFF, 32);
+        out.writeBit(false);
+        out.flush();
     }
 
     /**
@@ -106,19 +96,19 @@ public class Compressor {
 
         // If delta is zero, write single 0 bit
         if(deltaD == 0) {
-            writeBit(false);
+            out.writeBit(false);
         } else if(deltaD >= -63 && deltaD <= 64) {
-            writeBits(0x02, 2); // store '10'
-            writeBits(deltaD, 7); // Using 7 bits, store the value..
+            out.writeBits(0x02, 2); // store '10'
+            out.writeBits(deltaD, 7); // Using 7 bits, store the value..
         } else if(deltaD >= -255 && deltaD <= 256) {
-            writeBits(0x06, 3); // store '110'
-            writeBits(deltaD, 9); // Use 9 bits
+            out.writeBits(0x06, 3); // store '110'
+            out.writeBits(deltaD, 9); // Use 9 bits
         } else if(deltaD >= -2047 && deltaD <= 2048) {
-            writeBits(0x0E, 4); // store '1110'
-            writeBits(deltaD, 12); // Use 12 bits
+            out.writeBits(0x0E, 4); // store '1110'
+            out.writeBits(deltaD, 12); // Use 12 bits
         } else {
-            writeBits(0x0F, 4); // Store '1111'
-            writeBits(deltaD, 32); // Store delta using 32 bits
+            out.writeBits(0x0F, 4); // Store '1111'
+            out.writeBits(deltaD, 32); // Store delta using 32 bits
         }
 
         storedDelta = newDelta;
@@ -131,7 +121,7 @@ public class Compressor {
 
         if(xor == 0) {
             // Write 0
-            writeBit(false);
+            out.writeBit(false);
         } else {
             int leadingZeros = Long.numberOfLeadingZeros(xor);
             int trailingZeros = Long.numberOfTrailingZeros(xor);
@@ -142,26 +132,26 @@ public class Compressor {
             }
 
             // Store bit '1'
-            writeBit(true);
+            out.writeBit(true);
 
             // This should be >= for these checks, need to fix later (there's a bug if you just change them)
             if(leadingZeros != Integer.MAX_VALUE && leadingZeros == storedLeadingZeros && trailingZeros == storedTrailingZeros) {
-                writeBit(false);
+                out.writeBit(false);
                 // If there at least as many leading zeros and as many trailing zeros as previous value, control bit = 0 (type a)
                 // + store the meaningful XORed value
                 int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
-                writeBits(xor >>> trailingZeros, significantBits);
+                out.writeBits(xor >>> trailingZeros, significantBits);
             } else {
                 // store the length of the number of leading zeros in the next 5 bits
                 // + store length of the meaningful XORed value in the next 6 bits,
                 // + store the meaningful bits of the XORed value
                 // (type b)
-                writeBit(true);
-                writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
+                out.writeBit(true);
+                out.writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
 
                 int significantBits = 64 - leadingZeros - trailingZeros;
-                writeBits(significantBits, 6); // Length of meaningful bits in the next 6 bits
-                writeBits(xor >>> trailingZeros, significantBits); // Store the meaningful bits of XOR
+                out.writeBits(significantBits, 6); // Length of meaningful bits in the next 6 bits
+                out.writeBits(xor >>> trailingZeros, significantBits); // Store the meaningful bits of XOR
 
                 storedLeadingZeros = leadingZeros;
                 storedTrailingZeros = trailingZeros;
@@ -169,52 +159,5 @@ public class Compressor {
         }
 
         storedVal = value;
-    }
-
-    private void flipByte() {
-        if(bitsLeft == 0) {
-            bb.put(b);
-            if(!bb.hasRemaining()) {
-//                ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity() + DEFAULT_ALLOCATION);
-                ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity()*2);
-                bb.flip();
-                largerBB.put(bb);
-                largerBB.position(bb.capacity());
-                bb = largerBB;
-            }
-            b = bb.get(bb.position());
-            bitsLeft = Byte.SIZE;
-        }
-    }
-
-    private void writeBit(boolean bit) {
-        if(bit) {
-            b |= (1 << (bitsLeft - 1));
-        }
-        bitsLeft--;
-        flipByte();
-    }
-
-
-    private void writeBits(long value, int bits) {
-        // TODO Fix already compiled into a medium method
-        while(bits > 0) {
-            int shift = bits - bitsLeft;
-            // TODO Should I optimize the 0 shift case?
-            if(shift > 0) {
-                b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
-            } else {
-                int shiftAmount = Math.abs(shift);
-                b |= (byte) (value << shiftAmount);
-            }
-            if(bits > bitsLeft) {
-                bits -= bitsLeft;
-                bitsLeft = 0;
-            } else {
-                bitsLeft -= bits;
-                bits = 0;
-            }
-            flipByte();
-        }
     }
 }

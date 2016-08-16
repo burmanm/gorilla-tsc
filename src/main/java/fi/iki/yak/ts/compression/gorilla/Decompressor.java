@@ -8,9 +8,6 @@ import java.nio.ByteBuffer;
  */
 public class Decompressor {
 
-    private ByteBuffer bb;
-    private byte b;
-    private int bitsLeft = 0;
     private int storedLeadingZeros = Integer.MAX_VALUE;
     private int storedTrailingZeros = 0;
     private double storedVal = 0;
@@ -19,135 +16,111 @@ public class Decompressor {
 
     private long blockTimestamp = 0;
 
-    public Decompressor(ByteBuffer byteB) throws IOException {
-        bb = byteB;
-        flipByte();
-        readHeader();
-    }
+    private BitInput in;
 
-    public Decompressor(byte[] data) throws IOException {
-        bb = ByteBuffer.wrap(data);
-        flipByte();
-        readHeader();
-
-        /*
+    /*
         TODO: Implement SplitIterator / create RxJava bindings?
-        TODO Allow pumping custom BitStream process, for example for external ByteBuffer / ByteArrayOutputStream handling
-         */
+        TODO Allow pumping custom BitOutput process, for example for external ByteBuffer / ByteArrayOutputStream handling
+    */
+    public Decompressor(BitInput input) {
+        in = input;
+        readHeader();
     }
 
-    private void readHeader() throws IOException {
-        blockTimestamp = getLong(64);
-    }
-
-    private void flipByte() {
-        if (bitsLeft == 0) {
-            b = bb.get();
-            bitsLeft = Byte.SIZE;
-        }
+    private void readHeader() {
+        blockTimestamp = in.getLong(64);
     }
 
     public Pair readPair() throws IOException {
 
         if (storedTimestamp == 0) {
             // First item to read
-            storedDelta = getLong(Compressor.FIRST_DELTA_BITS);
-            storedVal = Double.longBitsToDouble(getLong(64));
+            storedDelta = in.getLong(Compressor.FIRST_DELTA_BITS);
+            storedVal = Double.longBitsToDouble(in.getLong(64));
             storedTimestamp = blockTimestamp + storedDelta;
         } else {
-            // Next, read timestamp
-            // TODO Read 4 bits and then return the unused extra bits for the next values.. or something
-            long deltaDelta = 0;
-            byte toRead = 0;
-            if (readBit()) {
-                if (!readBit()) {
-                    toRead = 7; // '10'
-                } else {
-                    if (!readBit()) {
-                        toRead = 9; // '110'
-                    } else {
-                        if (!readBit()) {
-                            // 1110
-                            toRead = 12;
-                        } else {
-                            // 1111
-                            toRead = 32;
-                        }
-                    }
-                }
+            if(nextTimestamp() == Long.MAX_VALUE) {
+                return null;
             }
-            if (toRead > 0) {
-                deltaDelta = getLong(toRead);
-
-                if(toRead == 32) {
-                    if ((int) deltaDelta == 0xFFFFFFFF) {
-                        // End of stream
-                        return null;
-                    }
-                } else {
-                    // Turn "unsigned" long value back to signed one
-                    if(deltaDelta > (1 << (toRead - 1))) {
-                        deltaDelta -= (1 << toRead);
-                    }
-                }
-
-                deltaDelta = (int) deltaDelta;
-            }
-
-            // Negative values of deltaDelta are not handled correctly. actually nothing negative is.. ugh
-
-            storedDelta = storedDelta + deltaDelta;
-            storedTimestamp = storedDelta + storedTimestamp;
-
-            // Read value
-            if (readBit()) {
-                // else -> same value as before
-                if (readBit()) {
-                    // New leading and trailing zeros
-                    storedLeadingZeros = (int) getLong(5);
-
-                    byte significantBits = (byte) getLong(6);
-                    if(significantBits == 0) {
-                        significantBits = 64;
-                    }
-                    storedTrailingZeros = 64 - significantBits - storedLeadingZeros;
-                }
-                long value = getLong(64 - storedLeadingZeros - storedTrailingZeros);
-                value <<= storedTrailingZeros;
-                value = Double.doubleToRawLongBits(storedVal) ^ value; // Would it make more sense to keep the rawLongBits in the memory than redo it?
-                storedVal = Double.longBitsToDouble(value);
-            }
+            nextValue();
         }
 
         return new Pair(storedTimestamp, storedVal);
     }
 
-    private boolean readBit() {
-        byte bit = (byte) ((b >> (bitsLeft - 1)) & 1);
-        bitsLeft--;
-        flipByte();
-        return bit == 1;
-    }
-
-    private long getLong(int bits) {
-        long value = 0;
-        while(bits > 0) {
-            if(bits > bitsLeft || bits == Byte.SIZE) {
-                // Take only the bitsLeft "least significant" bits
-                byte d = (byte) (b & ((1<<bitsLeft) - 1));
-                value = (value << bitsLeft) + (d & 0xFF);
-                bits -= bitsLeft;
-                bitsLeft = 0;
+    private int bitsToRead() {
+        // TODO Read 4 bits and then return the unused extra bits for the next values.. or something
+        int toRead = 0;
+        if (in.readBit()) {
+            if (!in.readBit()) {
+                toRead = 7; // '10'
             } else {
-                // TODO This isn't optimal - we need a range of bits
-                for(; bits > 0; bits--) {
-                    byte bit = (byte) ((b >> (bitsLeft - 1)) & 1);
-                    bitsLeft--;
-                    value = (value << 1) + (bit & 0xFF);
+                if (!in.readBit()) {
+                    toRead = 9; // '110'
+                } else {
+                    if (!in.readBit()) {
+                        // 1110
+                        toRead = 12;
+                    } else {
+                        // 1111
+                        toRead = 32;
+                    }
                 }
             }
-            flipByte();
         }
-        return value;
+        return toRead;
     }
+
+    private long nextTimestamp() {
+        // Next, read timestamp
+        long deltaDelta = 0;
+        int toRead = bitsToRead();
+        if (toRead > 0) {
+            deltaDelta = in.getLong(toRead);
+
+            if(toRead == 32) {
+                if ((int) deltaDelta == 0xFFFFFFFF) {
+                    // End of stream
+                    return Long.MAX_VALUE;
+                }
+            } else {
+                // Turn "unsigned" long value back to signed one
+                if(deltaDelta > (1 << (toRead - 1))) {
+                    deltaDelta -= (1 << toRead);
+                }
+            }
+
+            deltaDelta = (int) deltaDelta;
+        }
+
+        // Negative values of deltaDelta are not handled correctly. actually nothing negative is.. ugh
+
+        storedDelta = storedDelta + deltaDelta;
+        storedTimestamp = storedDelta + storedTimestamp;
+
+        return storedTimestamp;
+    }
+
+    private double nextValue() {
+        // Read value
+        if (in.readBit()) {
+            // else -> same value as before
+            if (in.readBit()) {
+                // New leading and trailing zeros
+                storedLeadingZeros = (int) in.getLong(5);
+
+                byte significantBits = (byte) in.getLong(6);
+                if(significantBits == 0) {
+                    significantBits = 64;
+                }
+                storedTrailingZeros = 64 - significantBits - storedLeadingZeros;
+            }
+            long value = in.getLong(64 - storedLeadingZeros - storedTrailingZeros);
+            value <<= storedTrailingZeros;
+            value = Double.doubleToRawLongBits(storedVal) ^ value; // Would it make more sense to keep the rawLongBits in the memory than redo it?
+            storedVal = Double.longBitsToDouble(value);
+        }
+        return storedVal;
+    }
+
 }

@@ -1,8 +1,6 @@
 package fi.iki.yak.ts.compression.gorilla.benchmark;
 
-import fi.iki.yak.ts.compression.gorilla.Compressor;
-import fi.iki.yak.ts.compression.gorilla.Decompressor;
-import fi.iki.yak.ts.compression.gorilla.Pair;
+import fi.iki.yak.ts.compression.gorilla.*;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -33,9 +31,11 @@ public class EncodingBenchmark {
 
         public long blockStart;
 
-//        public byte[] compressedBytes;
-        public byte[] uncompressedBytes;
+        public ByteBuffer uncompressedBuffer;
         public ByteBuffer compressedBuffer;
+
+        public ByteBufferBitOutput output;
+        public ByteBufferBitInput input;
 
         @Setup(Level.Trial)
         public void setup() {
@@ -59,11 +59,11 @@ public class EncodingBenchmark {
                 final int arrayOffset = bb.arrayOffset();
                 Arrays.copyOfRange(array, arrayOffset + bb.position(),
                         arrayOffset + bb.limit());
-                uncompressedBytes = array;
+                uncompressedBuffer = ByteBuffer.wrap(array);
             }
+            output = new ByteBufferBitOutput();
 
-
-            Compressor c = new Compressor(blockStart);
+            Compressor c = new Compressor(blockStart, output);
 
             bb.flip();
 
@@ -73,41 +73,36 @@ public class EncodingBenchmark {
 
             c.close();
 
-//            ByteBuffer buffer = c.getByteBuffer();
-//            if (buffer.hasArray()) {
-//                final byte[] array = buffer.array();
-//                final int arrayOffset = buffer.arrayOffset();
-//                Arrays.copyOfRange(array, arrayOffset + buffer.position(),
-//                        arrayOffset + buffer.limit());
-//                compressedBytes = array;
-//            }
-            ByteBuffer byteBuffer = c.getByteBuffer();
+            ByteBuffer byteBuffer = output.getByteBuffer();
             byteBuffer.flip();
             compressedBuffer = byteBuffer;
+
+            input = new ByteBufferBitInput(byteBuffer.duplicate());
+
         }
     }
 
     @Benchmark
     @OperationsPerInvocation(100000)
     public void encodingBenchmark(DataGenerator dg) {
-        Compressor c = new Compressor(dg.blockStart);
-
-        ByteBuffer bb = ByteBuffer.wrap(dg.uncompressedBytes);
+        dg.output.getByteBuffer().clear();
+        Compressor c = new Compressor(dg.blockStart, dg.output);
 
         for(int j = 0; j < dg.amountOfPoints; j++) {
-            c.addValue(bb.getLong(), bb.getLong());
+            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getLong());
         }
+        dg.uncompressedBuffer.flip();
         c.close();
     }
 
     @Benchmark
     @OperationsPerInvocation(100000)
     public void decodingBenchmark(DataGenerator dg, Blackhole bh) throws Exception {
-        Decompressor d = new Decompressor(dg.compressedBuffer);
+        Decompressor d = new Decompressor(dg.input);
         Pair pair;
         while((pair = d.readPair()) != null) {
             bh.consume(pair);
         }
-        dg.compressedBuffer.flip();
+        dg.input.getByteBuffer().flip();
     }
 }

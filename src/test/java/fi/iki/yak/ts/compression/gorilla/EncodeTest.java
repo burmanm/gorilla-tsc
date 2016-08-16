@@ -22,7 +22,9 @@ public class EncodeTest {
         long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        Compressor c = new Compressor(now);
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
+
+        Compressor c = new Compressor(now, output);
 
         Pair[] pairs = {
                 new Pair(now + 10, 1.0),
@@ -38,9 +40,11 @@ public class EncodeTest {
         Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getValue()));
         c.close();
 
-        ByteBuffer byteBuffer = c.getByteBuffer();
+        ByteBuffer byteBuffer = output.getByteBuffer();
         byteBuffer.flip();
-        Decompressor d = new Decompressor(byteBuffer);
+
+        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+        Decompressor d = new Decompressor(input);
 
         // Replace with stream once decompressor supports it
         for(int i = 0; i < pairs.length; i++) {
@@ -57,7 +61,8 @@ public class EncodeTest {
         // See https://github.com/dgryski/go-tsz/issues/4
         long now = LocalDateTime.of(2015, Month.MARCH, 02, 00, 00).toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        Compressor c = new Compressor(now);
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        Compressor c = new Compressor(now, output);
 
         Pair[] pairs = {
             new Pair(now + 1, 6.00065e+06),
@@ -70,9 +75,11 @@ public class EncodeTest {
         Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getValue()));
         c.close();
 
-        ByteBuffer byteBuffer = c.getByteBuffer();
+        ByteBuffer byteBuffer = output.getByteBuffer();
         byteBuffer.flip();
-        Decompressor d = new Decompressor(byteBuffer);
+
+        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+        Decompressor d = new Decompressor(input);
 
         // Replace with stream once decompressor supports it
         for(int i = 0; i < pairs.length; i++) {
@@ -89,6 +96,7 @@ public class EncodeTest {
         int amountOfPoints = 1000;
         long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
 
         long now = blockStart + 60;
         ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);
@@ -98,7 +106,7 @@ public class EncodeTest {
             bb.putDouble(i * Math.random());
         }
 
-        Compressor c = new Compressor(blockStart);
+        Compressor c = new Compressor(blockStart, output);
 
         bb.flip();
 
@@ -110,10 +118,11 @@ public class EncodeTest {
 
         bb.flip();
 
-        ByteBuffer byteBuffer = c.getByteBuffer();
+        ByteBuffer byteBuffer = output.getByteBuffer();
         byteBuffer.flip();
 
-        Decompressor d = new Decompressor(byteBuffer);
+        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+        Decompressor d = new Decompressor(input);
 
         for(int i = 0; i < amountOfPoints; i++) {
             long tStamp = bb.getLong();
