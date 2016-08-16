@@ -89,6 +89,8 @@ File an issue and/or send a push request.
 === License
 
 ....
+   Copyright 2016 Michael Burman and/or other contributors.
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
