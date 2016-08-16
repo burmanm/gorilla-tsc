@@ -1,7 +1,5 @@
 package fi.iki.yak.ts.compression.gorilla;
 
-import java.nio.ByteBuffer;
-
 /**
  * Implements the floating point compression as described in the Facebook's Gorilla Paper.. Heavily inspired by
  * the go-tsz package
@@ -28,27 +26,6 @@ public class Compressor {
         out = output;
         addHeader(timestamp);
     }
-
-    // The requested block size -> necessary for the first delta
-
-    // We need: requested timestamp precision (1s precision gives better compression)
-    // -> include precision information to a header
-    // What happens if we have two values at the same timestamp?
-
-    // Precisions? 1 = 1s, 1000 = ms? ENUM for that..?
-
-    // Add header here..?
-
-    // TODO Investigate another compression for millisecond precision? Delta-deltas are never 0 for these..
-    // JavaFastPFOR for example? https://github.com/lemire/JavaFastPFOR
-
-    // Should we store the sample count as last one? Helps in decompression (allocate only an array of size X)
-
-    // TODO Keep this clean Gorilla and then allow plugging just timestamp compressing or value compressor from this class
-
-    // TODO I need an int64 version of this also.. we're not always compressing doubles
-
-    // TODO Split timestamp compression & value compression, might want to use different timestamp compression for example
 
     private void addHeader(long timestamp) {
         // One byte: length of the first delta

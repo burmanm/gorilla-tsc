@@ -1,7 +1,6 @@
 package fi.iki.yak.ts.compression.gorilla;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * @author Michael Burman

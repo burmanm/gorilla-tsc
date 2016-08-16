@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by michael on 8/11/16.
+ * @author Michael Burman
  */
 @BenchmarkMode(Mode.Throughput)
 @State(Scope.Benchmark)
