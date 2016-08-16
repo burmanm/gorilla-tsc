@@ -13,6 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
+ * These are generic tests to test that input matches the output after compression + decompression cycle, using
+ * both the timestamp and value compression.
+ *
  * @author Michael Burman
  */
 public class EncodeTest {
@@ -56,9 +59,11 @@ public class EncodeTest {
         assertNull(d.readPair());
     }
 
+    /**
+     * Tests encoding of similar floats, see https://github.com/dgryski/go-tsz/issues/4 for more information.
+     */
     @Test
     void testEncodeSimilarFloats() throws Exception {
-        // See https://github.com/dgryski/go-tsz/issues/4
         long now = LocalDateTime.of(2015, Month.MARCH, 02, 00, 00).toInstant(ZoneOffset.UTC).toEpochMilli();
 
         ByteBufferBitOutput output = new ByteBufferBitOutput();
@@ -90,6 +95,10 @@ public class EncodeTest {
         assertNull(d.readPair());
     }
 
+    /**
+     * Tests writing enough large amount of datapoints that causes the included ByteBufferBitOutput to do
+     * internal byte array expansion.
+     */
     @Test
     void testEncodeLargeAmountOfData() throws Exception {
         // This test should trigger ByteBuffer reallocation

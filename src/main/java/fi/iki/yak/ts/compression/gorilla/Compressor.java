@@ -1,8 +1,8 @@
 package fi.iki.yak.ts.compression.gorilla;
 
 /**
- * Implements the floating point compression as described in the Facebook's Gorilla Paper.. Heavily inspired by
- * the go-tsz package
+ * Implements the time series compression as described in the Facebook's Gorilla Paper. Value compression
+ * is for floating points only.
  *
  * @author Michael Burman
  */
@@ -33,6 +33,12 @@ public class Compressor {
         out.writeBits(timestamp, 64);
     }
 
+    /**
+     * Adds a new value to the series. Note, values must be inserted in order.
+     *
+     * @param timestamp Timestamp which is inside the allowed time block (default 24 hours with millisecond precision)
+     * @param value
+     */
     public void addValue(long timestamp, double value) {
         // TODO If given timestamp is out of the block boundary, return error! Or just return new instance? ;)
         if(storedTimestamp == 0) {
@@ -48,6 +54,9 @@ public class Compressor {
         }
     }
 
+    /**
+     * Closes the block and writes the remaining stuff to the BitOutput.
+     */
     public void close() {
         // These are selected to test interoperability and correctness of the solution, this can be read with go-tsz
         out.writeBits(0x0F, 4);
@@ -60,9 +69,7 @@ public class Compressor {
      * Difference to the original Facebook paper, we store the first delta as 27 bits to allow
      * millisecond accuracy for a one day block.
      *
-     * Also, the timestamp delta-delta is not good for millisecond compressions.. might make more
-     * sense to always assume larger number (like 9 bits as the smallest number, 12, 15 or something? - needs
-     * testing)
+     * Also, the timestamp delta-delta is not good for millisecond compressions..
      *
      * @param timestamp
      */

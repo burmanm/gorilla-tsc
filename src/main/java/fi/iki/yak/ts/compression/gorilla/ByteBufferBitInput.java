@@ -3,6 +3,8 @@ package fi.iki.yak.ts.compression.gorilla;
 import java.nio.ByteBuffer;
 
 /**
+ * An implementation of BitInput that parses the data from byte array or existing ByteBuffer.
+ *
  * @author Michael Burman
  */
 public class ByteBufferBitInput implements BitInput {
@@ -10,6 +12,11 @@ public class ByteBufferBitInput implements BitInput {
     private byte b;
     private int bitsLeft = 0;
 
+    /**
+     * Uses an existing ByteBuffer to read the stream. Starts at the ByteBuffer's current position.
+     *
+     * @param buf
+     */
     public ByteBufferBitInput(ByteBuffer buf) {
         bb = buf;
         flipByte();
@@ -19,15 +26,24 @@ public class ByteBufferBitInput implements BitInput {
         this(ByteBuffer.wrap(input));
     }
 
+    /**
+     * Reads the next bit and returns a boolean representing it.
+     *
+     * @return true if the next bit is 1, otherwise 0.
+     */
     public boolean readBit() {
-//        byte bit = (byte) ((b >> (bitsLeft - 1)) & 1);
         boolean bit = ((b >> (bitsLeft - 1)) & 1) == 1;
         bitsLeft--;
         flipByte();
         return bit;
-//        return bit == 1;
     }
 
+    /**
+     * Reads a long from the next X bits that represent the least significant bits in the long value.
+     *
+     * @param bits How many next bits are read from the stream
+     * @return
+     */
     public long getLong(int bits) {
         long value = 0;
         while(bits > 0) {
@@ -57,6 +73,11 @@ public class ByteBufferBitInput implements BitInput {
         }
     }
 
+    /**
+     * Returns the underlying ByteBuffer
+     *
+     * @return
+     */
     public ByteBuffer getByteBuffer() {
         return this.bb;
     }

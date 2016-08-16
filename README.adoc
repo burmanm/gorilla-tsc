@@ -1,0 +1,104 @@
+= Time series compression library, based on the Facebook's Gorilla paper
+:source-language: java
+
+ifdef::env-github[]
+[link=https://travis-ci.org/burmanm/gorilla-tsc]
+image::https://travis-ci.org/burmanm/gorilla-tsc.svg?branch=master[Build Status,70,18]
+endif::[]
+
+== Introduction
+
+This is Java based implementation of the compression methods described in the paper link:http://www.vldb.org/pvldb/vol8/p1816-teller.pdf["Gorilla: A Fast, Scalable, In-Memory Time Series Database"]. For explanation on how the compression methods work, read the excellent paper.
+
+== Usage
+
+The included tests are a good source for examples.
+
+=== Maven
+
+[source, xml]
+----
+    <dependency>
+        <groupId>fi.iki.yak.ts.compression</groupId>
+        <artifactId>compression-gorilla</artifactId>
+        <version>${gorilla-tsc-version}</version>
+    </dependency>
+----
+
+=== Compressing
+
+[source, java]
+----
+long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
+        .toInstant(ZoneOffset.UTC).toEpochMilli();
+
+ByteBufferBitOutput output = new ByteBufferBitOutput();
+Compressor c = new Compressor(now, output);
+----
+
+Compression class requires a block timestamp and an implementation of `BitOutput` interface. `ByteBufferBitOutput` is an in-memory example that uses off-heap storage.
+
+[source, java]
+----
+c.addValue(long, double);
+----
+
+Adds new value to the time series. After the block is ready, remember to call
+
+[source, java]
+----
+c.close();
+----
+
+which flushes the remaining data to the stream and writes closing information.
+
+=== Decompressing
+
+[source, java]
+----
+ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+Decompressor d = new Decompressor(input);
+----
+
+To decompress a stream of bytes, supply `Decompressor` with a suitable implementation of `BitInput` interface. The ByteBufferBitInput allows to decompress a byte array or existing `ByteBuffer` presentation.
+
+[source, java]
+----
+Pair pair = d.readPair();
+----
+
+Requesting next pair with `readPair()` returns the following series value or a `null` once the series is completely read. The pair is a simple placeholder with `getTimestamp()` and `getValue()`.
+
+== Internals
+
+=== Data structure
+
+Values must be inserted in the increasing time order, out-of-order insertions are not supported.
+
+The included ByteBufferBitInput and ByteBufferBitOutput classes use a big endian order for the data.
+
+=== Block size
+
+The compressed blocks are created with a 27 bit header (unlike in the original paper, which uses a 14 bit delta header). This allows to
+use up to one day block using millisecond precision. However, as noted in the paper, the compression ratio does not usually improve with blocks larger than 2 hours.
+
+== Contributing
+
+File an issue and/or send a push request.
+
+=== License
+
+....
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+....
+

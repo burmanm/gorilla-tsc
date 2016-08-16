@@ -15,7 +15,12 @@
         <junit.vintage.version>4.12.0-M2</junit.vintage.version>
         <jmh.version>1.13</jmh.version>
         <jar.name>benchmark</jar.name>
+        <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
     </properties>
+
+    <scm>
+        <developerConnection>scm:git:git://github.com/burmanm/gorilla-tsc</developerConnection>
+    </scm>
 
     <dependencies>
         <dependency>
@@ -85,6 +90,11 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>${maven.release.plugin.version}</version>
             </plugin>
         </plugins>
     </build>

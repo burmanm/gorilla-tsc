@@ -1,8 +1,8 @@
 package fi.iki.yak.ts.compression.gorilla;
 
-import java.io.IOException;
-
 /**
+ * Decompresses a compressed stream done created by the Compressor. Returns pairs of timestamp and flaoting point value.
+ *
  * @author Michael Burman
  */
 public class Decompressor {
@@ -17,10 +17,6 @@ public class Decompressor {
 
     private BitInput in;
 
-    /*
-        TODO: Implement SplitIterator / create RxJava bindings?
-        TODO Allow pumping custom BitOutput process, for example for external ByteBuffer / ByteArrayOutputStream handling
-    */
     public Decompressor(BitInput input) {
         in = input;
         readHeader();
@@ -30,7 +26,12 @@ public class Decompressor {
         blockTimestamp = in.getLong(64);
     }
 
-    public Pair readPair() throws IOException {
+    /**
+     * Returns the next pair in the time series, if available.
+     *
+     * @return Pair if there's next value, null if series is done.
+     */
+    public Pair readPair() {
 
         if (storedTimestamp == 0) {
             // First item to read
