@@ -19,7 +19,7 @@
     </properties>
 
     <scm>
-        <developerConnection>scm:git:git://github.com/burmanm/gorilla-tsc</developerConnection>
+        <developerConnection>scm:git:git@github.com:burmanm/gorilla-tsc.git</developerConnection>
     </scm>
 
     <distributionManagement>
