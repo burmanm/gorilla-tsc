@@ -4,7 +4,7 @@
 
     <groupId>fi.iki.yak</groupId>
     <artifactId>compression-gorilla</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <properties>
         <java.version>1.8</java.version>
@@ -18,7 +18,7 @@
 
     <scm>
         <developerConnection>scm:git:git@github.com:burmanm/gorilla-tsc.git</developerConnection>
-      <tag>compression-gorilla-1.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <distributionManagement>
