@@ -5,7 +5,7 @@ ifdef::env-github[]
 [link=https://travis-ci.org/burmanm/gorilla-tsc]
 image::https://travis-ci.org/burmanm/gorilla-tsc.svg?branch=master[Build Status,70,18]
 [link=https://maven-badges.herokuapp.com/maven-central/fi.iki.yak/compression-gorilla]
-image::https://img.shields.io/maven-central/v/fi.iki.yak/compression-gorilla.svg?maxAge=2592000
+image::https://img.shields.io/maven-central/v/fi.iki.yak/compression-gorilla.svg?maxAge=2592000[Maven central]
 endif::[]
 
 == Introduction
