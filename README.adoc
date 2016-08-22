@@ -4,6 +4,8 @@
 ifdef::env-github[]
 [link=https://travis-ci.org/burmanm/gorilla-tsc]
 image::https://travis-ci.org/burmanm/gorilla-tsc.svg?branch=master[Build Status,70,18]
+[link=https://maven-badges.herokuapp.com/maven-central/fi.iki.yak/compression-gorilla]
+image::https://img.shields.io/maven-central/v/fi.iki.yak/compression-gorilla.svg?maxAge=2592000
 endif::[]
 
 == Introduction
@@ -21,7 +23,7 @@ The included tests are a good source for examples.
     <dependency>
         <groupId>fi.iki.yak.ts.compression</groupId>
         <artifactId>compression-gorilla</artifactId>
-        <version>${gorilla-tsc-version}</version>
+        <version>${version.compression-gorilla}</version>
     </dependency>
 ----
 
