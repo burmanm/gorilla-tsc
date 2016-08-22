@@ -5,6 +5,17 @@
     <groupId>fi.iki.yak</groupId>
     <artifactId>compression-gorilla</artifactId>
     <version>1.0.1-SNAPSHOT</version>
+    <name>Gorilla time series compression in Java</name>
+    <description>Implements the time series compression methods as described in the Facebook's Gorilla
+        paper</description>
+    <url>https://github.com/burmanm/gorilla-tsc</url>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <properties>
         <java.version>1.8</java.version>
@@ -17,9 +28,20 @@
     </properties>
 
     <scm>
+        <url>https://github.com/burmanm/gorilla-tsc</url>
+        <connection>scm:git:git://github.com/burmam/gorilla-tsc.git</connection>
         <developerConnection>scm:git:git@github.com:burmanm/gorilla-tsc.git</developerConnection>
-      <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <email>yak@iki.fi</email>
+            <name>Michael Burman</name>
+            <url>https://github.com/burmanm</url>
+            <id>burmanm</id>
+        </developer>
+    </developers>
 
     <distributionManagement>
         <repository>
@@ -117,6 +139,42 @@
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>false</autoReleaseAfterClose>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
