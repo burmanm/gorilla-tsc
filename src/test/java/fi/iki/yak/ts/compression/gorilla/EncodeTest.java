@@ -142,4 +142,23 @@ public class EncodeTest {
         }
         assertNull(d.readPair());
     }
+
+    @Test
+    void testEmptyBlock() throws Exception {
+        long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
+                .toInstant(ZoneOffset.UTC).toEpochMilli();
+
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
+
+        Compressor c = new Compressor(now, output);
+        c.close();
+
+        ByteBuffer byteBuffer = output.getByteBuffer();
+        byteBuffer.flip();
+
+        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+        Decompressor d = new Decompressor(input);
+
+        assertNull(d.readPair());
+    }
 }

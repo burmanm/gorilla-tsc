@@ -36,6 +36,11 @@ public class Decompressor {
         if (storedTimestamp == 0) {
             // First item to read
             storedDelta = in.getLong(Compressor.FIRST_DELTA_BITS);
+
+            if(storedDelta == (1<<27) - 1) {
+                // Empty - no timestamp space left
+                return null;
+            }
             storedVal = Double.longBitsToDouble(in.getLong(64));
             storedTimestamp = blockTimestamp + storedDelta;
         } else {
