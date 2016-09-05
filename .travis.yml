@@ -1,5 +1,6 @@
 # Enable container-based infrastructure
 sudo: false
 language: java
+install: mvn install -DskipTests -Dgpg.skip
 jdk:
 - oraclejdk8
