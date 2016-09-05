@@ -4,7 +4,7 @@
 
     <groupId>fi.iki.yak</groupId>
     <artifactId>compression-gorilla</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3-SNAPSHOT</version>
     <name>Gorilla time series compression in Java</name>
     <description>Implements the time series compression methods as described in the Facebook's Gorilla
         paper</description>
@@ -31,7 +31,7 @@
         <url>https://github.com/burmanm/gorilla-tsc</url>
         <connection>scm:git:git://github.com/burmam/gorilla-tsc.git</connection>
         <developerConnection>scm:git:git@github.com:burmanm/gorilla-tsc.git</developerConnection>
-        <tag>compression-gorilla-1.0.2</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <developers>
