@@ -54,12 +54,11 @@ public class ByteBufferBitInput implements BitInput {
                 bits -= bitsLeft;
                 bitsLeft = 0;
             } else {
-                // TODO This isn't optimal - we need a range of bits
-                for(; bits > 0; bits--) {
-                    byte bit = (byte) ((b >> (bitsLeft - 1)) & 1);
-                    bitsLeft--;
-                    value = (value << 1) + (bit & 0xFF);
-                }
+                // Shift to correct position and take only least significant bits
+                byte d = (byte) ((b >>> (bitsLeft - bits)) & ((1<<bits) - 1));
+                value = (value << bits) + (d & 0xFF);
+                bitsLeft -= bits;
+                bits = 0;
             }
             flipByte();
         }
