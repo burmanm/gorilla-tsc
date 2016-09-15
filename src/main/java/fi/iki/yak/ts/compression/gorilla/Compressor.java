@@ -119,12 +119,12 @@ public class Compressor {
             out.writeBit(true);
 
             // This should be >= for these checks, need to fix later (there's a bug if you just change them)
-            if(leadingZeros != Integer.MAX_VALUE && leadingZeros == storedLeadingZeros && trailingZeros == storedTrailingZeros) {
+            if(leadingZeros != Integer.MAX_VALUE && leadingZeros >= storedLeadingZeros && trailingZeros >= storedTrailingZeros) {
                 out.writeBit(false);
                 // If there at least as many leading zeros and as many trailing zeros as previous value, control bit = 0 (type a)
                 // + store the meaningful XORed value
                 int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
-                out.writeBits(xor >>> trailingZeros, significantBits);
+                out.writeBits(xor >>> storedTrailingZeros, significantBits);
             } else {
                 // store the length of the number of leading zeros in the next 5 bits
                 // + store length of the meaningful XORed value in the next 6 bits,

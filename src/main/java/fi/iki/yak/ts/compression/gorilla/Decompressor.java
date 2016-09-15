@@ -98,8 +98,6 @@ public class Decompressor {
             deltaDelta = (int) deltaDelta;
         }
 
-        // Negative values of deltaDelta are not handled correctly. actually nothing negative is.. ugh
-
         storedDelta = storedDelta + deltaDelta;
         storedTimestamp = storedDelta + storedTimestamp;
 
