@@ -5,9 +5,9 @@ package fi.iki.yak.ts.compression.gorilla;
  */
 public class Pair {
     private long timestamp;
-    private double value;
+    private long value;
 
-    public Pair(long timestamp, double value) {
+    public Pair(long timestamp, long value) {
         this.timestamp = timestamp;
         this.value = value;
     }
@@ -16,7 +16,11 @@ public class Pair {
         return timestamp;
     }
 
-    public double getValue() {
+    public double getDoubleValue() {
+        return Double.longBitsToDouble(value);
+    }
+
+    public long getLongValue() {
         return value;
     }
 }

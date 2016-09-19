@@ -10,7 +10,7 @@ public class Compressor {
 
     private int storedLeadingZeros = Integer.MAX_VALUE;
     private int storedTrailingZeros = 0;
-    private double storedVal = 0;
+    private long storedVal = 0;
     private long storedTimestamp = 0;
     private long storedDelta = 0;
 
@@ -34,24 +34,42 @@ public class Compressor {
     }
 
     /**
-     * Adds a new value to the series. Note, values must be inserted in order.
+     * Adds a new long value to the series. Note, values must be inserted in order.
      *
      * @param timestamp Timestamp which is inside the allowed time block (default 24 hours with millisecond precision)
-     * @param value
+     * @param value next floating point value in the series
      */
-    public void addValue(long timestamp, double value) {
-        // TODO If given timestamp is out of the block boundary, return error! Or just return new instance? ;)
+    public void addValue(long timestamp, long value) {
         if(storedTimestamp == 0) {
-            storedDelta = timestamp - blockTimestamp;
-            storedTimestamp = timestamp;
-            storedVal = value;
-
-            out.writeBits(storedDelta, FIRST_DELTA_BITS);
-            out.writeBits(Double.doubleToRawLongBits(storedVal), 64);
+            writeFirst(timestamp, value);
         } else {
             compressTimestamp(timestamp);
             compressValue(value);
         }
+    }
+
+    /**
+     * Adds a new double value to the series. Note, values must be inserted in order.
+     *
+     * @param timestamp Timestamp which is inside the allowed time block (default 24 hours with millisecond precision)
+     * @param value next floating point value in the series
+     */
+    public void addValue(long timestamp, double value) {
+        if(storedTimestamp == 0) {
+            writeFirst(timestamp, Double.doubleToRawLongBits(value));
+        } else {
+            compressTimestamp(timestamp);
+            compressValue(Double.doubleToRawLongBits(value));
+        }
+    }
+
+    private void writeFirst(long timestamp, long value) {
+        storedDelta = timestamp - blockTimestamp;
+        storedTimestamp = timestamp;
+        storedVal = value;
+
+        out.writeBits(storedDelta, FIRST_DELTA_BITS);
+        out.writeBits(storedVal, 64);
     }
 
     /**
@@ -99,9 +117,9 @@ public class Compressor {
         storedTimestamp = timestamp;
     }
 
-    private void compressValue(double value) {
+    private void compressValue(long value) {
         // TODO Fix already compiled into a big method
-        long xor = Double.doubleToRawLongBits(storedVal) ^ Double.doubleToRawLongBits(value);
+       long xor = storedVal ^ value;
 
         if(xor == 0) {
             // Write 0

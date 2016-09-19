@@ -53,7 +53,7 @@ public class ByteBufferBitOutput implements BitOutput {
     /**
      * Sets the next bit (or not) and moves the bit pointer.
      *
-     * @param bit
+     * @param bit true -> 1 or false -> 0
      */
     public void writeBit(boolean bit) {
         if(bit) {
@@ -63,19 +63,17 @@ public class ByteBufferBitOutput implements BitOutput {
         flipByte();
     }
 
-
     /**
-     * Writes the given long to the stream using bits amount of bits.
+     * Writes the given long to the stream using bits amount of meaningful bits.
      *
-     * @param value
+     * @param value Value to be written to the stream
      * @param bits How many bits are stored to the stream
      */
     public void writeBits(long value, int bits) {
         // TODO Fix already compiled into a medium method
         while(bits > 0) {
             int shift = bits - bitsLeft;
-            // TODO Should I optimize the 0 shift case?
-            if(shift > 0) {
+            if(shift >= 0) {
                 b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
             } else {
                 int shiftAmount = Math.abs(shift);

@@ -9,11 +9,13 @@ public class Decompressor {
 
     private int storedLeadingZeros = Integer.MAX_VALUE;
     private int storedTrailingZeros = 0;
-    private double storedVal = 0;
+    private long storedVal = 0;
     private long storedTimestamp = 0;
     private long storedDelta = 0;
 
     private long blockTimestamp = 0;
+
+    private boolean endOfStream = false;
 
     private BitInput in;
 
@@ -32,25 +34,27 @@ public class Decompressor {
      * @return Pair if there's next value, null if series is done.
      */
     public Pair readPair() {
+        next();
+        if(endOfStream) {
+            return null;
+        }
+        return new Pair(storedTimestamp, storedVal);
+    }
 
+    private void next() {
         if (storedTimestamp == 0) {
             // First item to read
             storedDelta = in.getLong(Compressor.FIRST_DELTA_BITS);
-
             if(storedDelta == (1<<27) - 1) {
-                // Empty - no timestamp space left
-                return null;
+                endOfStream = true;
+                return;
             }
-            storedVal = Double.longBitsToDouble(in.getLong(64));
+            storedVal = in.getLong(64);
             storedTimestamp = blockTimestamp + storedDelta;
         } else {
-            if(nextTimestamp() == Long.MAX_VALUE) {
-                return null;
-            }
+            nextTimestamp();
             nextValue();
         }
-
-        return new Pair(storedTimestamp, storedVal);
     }
 
     private int bitsToRead() {
@@ -76,7 +80,7 @@ public class Decompressor {
         return toRead;
     }
 
-    private long nextTimestamp() {
+    private void nextTimestamp() {
         // Next, read timestamp
         long deltaDelta = 0;
         int toRead = bitsToRead();
@@ -86,7 +90,8 @@ public class Decompressor {
             if(toRead == 32) {
                 if ((int) deltaDelta == 0xFFFFFFFF) {
                     // End of stream
-                    return Long.MAX_VALUE;
+                    endOfStream = true;
+                    return;
                 }
             } else {
                 // Turn "unsigned" long value back to signed one
@@ -100,11 +105,9 @@ public class Decompressor {
 
         storedDelta = storedDelta + deltaDelta;
         storedTimestamp = storedDelta + storedTimestamp;
-
-        return storedTimestamp;
     }
 
-    private double nextValue() {
+    private void nextValue() {
         // Read value
         if (in.readBit()) {
             // else -> same value as before
@@ -120,10 +123,9 @@ public class Decompressor {
             }
             long value = in.getLong(64 - storedLeadingZeros - storedTrailingZeros);
             value <<= storedTrailingZeros;
-            value = Double.doubleToRawLongBits(storedVal) ^ value; // Would it make more sense to keep the rawLongBits in the memory than redo it?
-            storedVal = Double.longBitsToDouble(value);
+            value = storedVal ^ value;
+            storedVal = value;
         }
-        return storedVal;
     }
 
 }
