@@ -89,7 +89,7 @@ public class Compressor {
      *
      * Also, the timestamp delta-delta is not good for millisecond compressions..
      *
-     * @param timestamp
+     * @param timestamp epoch
      */
     private void compressTimestamp(long timestamp) {
         // a) Calculate the delta of delta
@@ -138,28 +138,46 @@ public class Compressor {
 
             // This should be >= for these checks, need to fix later (there's a bug if you just change them)
             if(leadingZeros != Integer.MAX_VALUE && leadingZeros >= storedLeadingZeros && trailingZeros >= storedTrailingZeros) {
-                out.writeBit(false);
-                // If there at least as many leading zeros and as many trailing zeros as previous value, control bit = 0 (type a)
-                // + store the meaningful XORed value
-                int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
-                out.writeBits(xor >>> storedTrailingZeros, significantBits);
+                writeExistingLeading(xor);
             } else {
-                // store the length of the number of leading zeros in the next 5 bits
-                // + store length of the meaningful XORed value in the next 6 bits,
-                // + store the meaningful bits of the XORed value
-                // (type b)
-                out.writeBit(true);
-                out.writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
-
-                int significantBits = 64 - leadingZeros - trailingZeros;
-                out.writeBits(significantBits, 6); // Length of meaningful bits in the next 6 bits
-                out.writeBits(xor >>> trailingZeros, significantBits); // Store the meaningful bits of XOR
-
-                storedLeadingZeros = leadingZeros;
-                storedTrailingZeros = trailingZeros;
+                writeNewLeading(xor, leadingZeros, trailingZeros);
             }
         }
 
         storedVal = value;
+    }
+
+    /**
+     * If there at least as many leading zeros and as many trailing zeros as previous value, control bit = 0 (type a)
+     * store the meaningful XORed value
+     *
+     * @param xor XOR between previous value and current
+     */
+    private void writeExistingLeading(long xor) {
+        out.writeBit(false);
+        int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
+        out.writeBits(xor >>> storedTrailingZeros, significantBits);
+    }
+
+    /**
+     * store the length of the number of leading zeros in the next 5 bits
+     * store length of the meaningful XORed value in the next 6 bits,
+     * store the meaningful bits of the XORed value
+     * (type b)
+     *
+     * @param xor XOR between previous value and current
+     * @param leadingZeros New leading zeros
+     * @param trailingZeros New trailing zeros
+     */
+    private void writeNewLeading(long xor, int leadingZeros, int trailingZeros) {
+        out.writeBit(true);
+        out.writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
+
+        int significantBits = 64 - leadingZeros - trailingZeros;
+        out.writeBits(significantBits, 6); // Length of meaningful bits in the next 6 bits
+        out.writeBits(xor >>> trailingZeros, significantBits); // Store the meaningful bits of XOR
+
+        storedLeadingZeros = leadingZeros;
+        storedTrailingZeros = trailingZeros;
     }
 }

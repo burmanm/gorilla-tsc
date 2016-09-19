@@ -34,9 +34,6 @@ public class EncodingBenchmark {
         public ByteBuffer uncompressedBuffer;
         public ByteBuffer compressedBuffer;
 
-        public ByteBufferBitOutput output;
-        public ByteBufferBitInput input;
-
         @Setup(Level.Trial)
         public void setup() {
             blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
@@ -51,24 +48,23 @@ public class EncodingBenchmark {
             for(int i = 0; i < amountOfPoints; i++) {
                 now += 60;
                 bb.putLong(now);
-                bb.putLong(i);
+                bb.putDouble(i);
+//                bb.putLong(i);
             }
 
             if (bb.hasArray()) {
-                final byte[] array = bb.array();
-                final int arrayOffset = bb.arrayOffset();
-                Arrays.copyOfRange(array, arrayOffset + bb.position(),
-                        arrayOffset + bb.limit());
-                uncompressedBuffer = ByteBuffer.wrap(array);
+                uncompressedBuffer = bb.duplicate();
+                uncompressedBuffer.flip();
             }
-            output = new ByteBufferBitOutput();
+            ByteBufferBitOutput output = new ByteBufferBitOutput();
 
             Compressor c = new Compressor(blockStart, output);
 
             bb.flip();
 
             for(int j = 0; j < amountOfPoints; j++) {
-                c.addValue(bb.getLong(), bb.getLong());
+//                c.addValue(bb.getLong(), bb.getLong());
+                c.addValue(bb.getLong(), bb.getDouble());
             }
 
             c.close();
@@ -76,33 +72,31 @@ public class EncodingBenchmark {
             ByteBuffer byteBuffer = output.getByteBuffer();
             byteBuffer.flip();
             compressedBuffer = byteBuffer;
-
-            input = new ByteBufferBitInput(byteBuffer.duplicate());
-
         }
     }
 
     @Benchmark
     @OperationsPerInvocation(100000)
     public void encodingBenchmark(DataGenerator dg) {
-        dg.output.getByteBuffer().clear();
-        Compressor c = new Compressor(dg.blockStart, dg.output);
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        Compressor c = new Compressor(dg.blockStart, output);
 
         for(int j = 0; j < dg.amountOfPoints; j++) {
-            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getLong());
+            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getDouble());
         }
-        dg.uncompressedBuffer.flip();
         c.close();
+        dg.uncompressedBuffer.rewind();
     }
 
     @Benchmark
     @OperationsPerInvocation(100000)
-    public void decodingBenchmark(DataGenerator dg, Blackhole bh) throws Exception {
-        Decompressor d = new Decompressor(dg.input);
+    public void decodingDoubleBenchmark(DataGenerator dg, Blackhole bh) throws Exception {
+        ByteBuffer duplicate = dg.compressedBuffer.duplicate();
+        ByteBufferBitInput input = new ByteBufferBitInput(duplicate);
+        Decompressor d = new Decompressor(input);
         Pair pair;
         while((pair = d.readPair()) != null) {
             bh.consume(pair);
         }
-        dg.input.getByteBuffer().flip();
     }
 }
