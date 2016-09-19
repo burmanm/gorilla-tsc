@@ -9,14 +9,14 @@ public interface BitOutput {
 
     /**
      * Stores a single bit, set if true, false otherwise.
-     * @param bit
+     * @param bit false == 0, true == 1
      */
     void writeBit(boolean bit);
 
     /**
      * Write the given long value using the defined amount of least significant bits.
      *
-     * @param value
+     * @param value The long value to be written
      * @param bits How many bits are stored to the stream
      */
     void writeBits(long value, int bits);

@@ -24,7 +24,7 @@ public class ByteBufferBitOutput implements BitOutput {
     /**
      * Give an initialSize different than DEFAULT_ALLOCATIONS. Recommended to use values which are dividable by 4096.
      *
-     * @param initialSize
+     * @param initialSize New initialsize to use
      */
     public ByteBufferBitOutput(int initialSize) {
         bb = ByteBuffer.allocateDirect(initialSize);
@@ -53,7 +53,7 @@ public class ByteBufferBitOutput implements BitOutput {
     /**
      * Sets the next bit (or not) and moves the bit pointer.
      *
-     * @param bit true -> 1 or false -> 0
+     * @param bit true == 1 or false == 0
      */
     public void writeBit(boolean bit) {
         if(bit) {

@@ -115,7 +115,7 @@ public class EncodeTest {
     @Test
     void testEncodeLargeAmountOfData() throws Exception {
         // This test should trigger ByteBuffer reallocation
-        int amountOfPoints = 10000;
+        int amountOfPoints = 100000;
         long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
         ByteBufferBitOutput output = new ByteBufferBitOutput();
@@ -156,6 +156,9 @@ public class EncodeTest {
         assertNull(d.readPair());
     }
 
+    /**
+     * Although not intended usage, an empty block should not cause errors
+     */
     @Test
     void testEmptyBlock() throws Exception {
         long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
@@ -175,6 +178,9 @@ public class EncodeTest {
         assertNull(d.readPair());
     }
 
+    /**
+     * Long values should be compressable and decompressable in the stream
+     */
     @Test
     void testLongEncoding() throws Exception {
         // This test should trigger ByteBuffer reallocation

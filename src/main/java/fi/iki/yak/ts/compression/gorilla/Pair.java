@@ -1,7 +1,9 @@
 package fi.iki.yak.ts.compression.gorilla;
 
 /**
- * Created by michael on 8/5/16.
+ * Pair is an extracted timestamp,value pair from the stream
+ *
+ * @author Michael Burman
  */
 public class Pair {
     private long timestamp;

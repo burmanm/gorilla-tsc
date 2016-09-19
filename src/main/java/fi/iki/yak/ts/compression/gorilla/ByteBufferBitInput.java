@@ -15,7 +15,7 @@ public class ByteBufferBitInput implements BitInput {
     /**
      * Uses an existing ByteBuffer to read the stream. Starts at the ByteBuffer's current position.
      *
-     * @param buf
+     * @param buf Use existing ByteBuffer
      */
     public ByteBufferBitInput(ByteBuffer buf) {
         bb = buf;
@@ -42,7 +42,7 @@ public class ByteBufferBitInput implements BitInput {
      * Reads a long from the next X bits that represent the least significant bits in the long value.
      *
      * @param bits How many next bits are read from the stream
-     * @return
+     * @return long value that was read from the stream
      */
     public long getLong(int bits) {
         long value = 0;
@@ -75,7 +75,7 @@ public class ByteBufferBitInput implements BitInput {
     /**
      * Returns the underlying ByteBuffer
      *
-     * @return
+     * @return ByteBuffer that's connected to the underlying stream
      */
     public ByteBuffer getByteBuffer() {
         return this.bb;

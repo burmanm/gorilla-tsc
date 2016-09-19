@@ -10,7 +10,7 @@ public interface BitInput {
     /**
      * Reads the next bit and returns true if bit is set and false if not.
      *
-     * @return
+     * @return true == 1, false == 0
      */
     boolean readBit();
 
@@ -18,7 +18,7 @@ public interface BitInput {
      * Returns a long that was stored in the next X bits in the stream.
      *
      * @param bits Amount of least significant bits to read from the stream.
-     * @return
+     * @return reads the next long in the series using bits meaningful bits
      */
     long getLong(int bits);
 }
