@@ -12,6 +12,9 @@ endif::[]
 
 This is Java based implementation of the compression methods described in the paper link:http://www.vldb.org/pvldb/vol8/p1816-teller.pdf["Gorilla: A Fast, Scalable, In-Memory Time Series Database"]. For explanation on how the compression methods work, read the excellent paper.
 
+In comparison to the original paper, this implementation allows using both integer values (`long`) as well as
+floating point values (`double`), both 64 bit in length.
+
 == Usage
 
 The included tests are a good source for examples.
@@ -31,7 +34,7 @@ The included tests are a good source for examples.
 
 [source, java]
 ----
-long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
+long now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS)
         .toInstant(ZoneOffset.UTC).toEpochMilli();
 
 ByteBufferBitOutput output = new ByteBufferBitOutput();
@@ -45,7 +48,9 @@ Compression class requires a block timestamp and an implementation of `BitOutput
 c.addValue(long, double);
 ----
 
-Adds new value to the time series. After the block is ready, remember to call
+Adds a new floating-point value to the time series. If you wish to store only long values, use `c.addValue(long,
+long)`, however do `not` mix these in the same series.
+After the block is ready, remember to call
 
 [source, java]
 ----
@@ -69,7 +74,8 @@ To decompress a stream of bytes, supply `Decompressor` with a suitable implement
 Pair pair = d.readPair();
 ----
 
-Requesting next pair with `readPair()` returns the following series value or a `null` once the series is completely read. The pair is a simple placeholder with `getTimestamp()` and `getValue()`.
+Requesting next pair with `readPair()` returns the following series value or a `null` once the series is completely
+read. The pair is a simple placeholder object with `getTimestamp()` and `getDoubleValue()` or `getLongValue()`.
 
 == Internals
 
@@ -82,7 +88,7 @@ The included ByteBufferBitInput and ByteBufferBitOutput classes use a big endian
 === Block size
 
 The compressed blocks are created with a 27 bit header (unlike in the original paper, which uses a 14 bit delta header). This allows to
-use up to one day block using millisecond precision. However, as noted in the paper, the compression ratio does not usually improve with blocks larger than 2 hours.
+use up to one day block size using millisecond precision.
 
 == Contributing
 
