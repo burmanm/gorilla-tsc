@@ -70,22 +70,17 @@ public class ByteBufferBitOutput implements BitOutput {
      * @param bits How many bits are stored to the stream
      */
     public void writeBits(long value, int bits) {
-        // TODO Fix already compiled into a medium method
         while(bits > 0) {
-            int shift = bits - bitsLeft;
-            if(shift >= 0) {
+            int bitsToWrite = (bits > bitsLeft) ? bitsLeft : bits;
+            if(bits > bitsLeft) {
+                int shift = bits - bitsLeft;
                 b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
             } else {
-                int shiftAmount = Math.abs(shift);
-                b |= (byte) (value << shiftAmount);
+                int shift = bitsLeft - bits;
+                b |= (byte) (value << shift);
             }
-            if(bits > bitsLeft) {
-                bits -= bitsLeft;
-                bitsLeft = 0;
-            } else {
-                bitsLeft -= bits;
-                bits = 0;
-            }
+            bits -= bitsToWrite;
+            bitsLeft -= bitsToWrite;
             flipByte();
         }
     }

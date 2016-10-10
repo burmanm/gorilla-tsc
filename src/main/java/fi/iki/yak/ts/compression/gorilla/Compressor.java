@@ -136,8 +136,7 @@ public class Compressor {
             // Store bit '1'
             out.writeBit(true);
 
-            // This should be >= for these checks, need to fix later (there's a bug if you just change them)
-            if(leadingZeros != Integer.MAX_VALUE && leadingZeros >= storedLeadingZeros && trailingZeros >= storedTrailingZeros) {
+            if(leadingZeros >= storedLeadingZeros && trailingZeros >= storedTrailingZeros) {
                 writeExistingLeading(xor);
             } else {
                 writeNewLeading(xor, leadingZeros, trailingZeros);

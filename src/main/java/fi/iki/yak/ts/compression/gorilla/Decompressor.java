@@ -58,25 +58,37 @@ public class Decompressor {
     }
 
     private int bitsToRead() {
-        // TODO Read 4 bits and then return the unused extra bits for the next values.. or something
-        int toRead = 0;
-        if (in.readBit()) {
-            if (!in.readBit()) {
-                toRead = 7; // '10'
+        int val = 0x00;
+
+        for(int i = 0; i < 4; i++) {
+            val <<= 1;
+            boolean bit = in.readBit();
+            if(bit) {
+                val |= 0x01;
             } else {
-                if (!in.readBit()) {
-                    toRead = 9; // '110'
-                } else {
-                    if (!in.readBit()) {
-                        // 1110
-                        toRead = 12;
-                    } else {
-                        // 1111
-                        toRead = 32;
-                    }
-                }
+                break;
             }
         }
+
+        int toRead = 0;
+
+        switch(val) {
+            case 0x00:
+                break;
+            case 0x02:
+                toRead = 7; // '10'
+                break;
+            case 0x06:
+                toRead = 9; // '110'
+                break;
+            case 0x0e:
+                toRead = 12;
+                break;
+            case 0x0F:
+                toRead = 32;
+                break;
+        }
+
         return toRead;
     }
 
