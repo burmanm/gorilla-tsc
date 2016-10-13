@@ -65,6 +65,22 @@ public class ByteBufferBitInput implements BitInput {
         return value;
     }
 
+    @Override
+    public int nextClearBit(int maxBits) {
+        int val = 0x00;
+
+        for(int i = 0; i < maxBits; i++) {
+            val <<= 1;
+            boolean bit = readBit();
+            if(bit) {
+                val |= 0x01;
+            } else {
+                break;
+            }
+        }
+        return val;
+    }
+
     private void flipByte() {
         if (bitsLeft == 0) {
             b = bb.get();

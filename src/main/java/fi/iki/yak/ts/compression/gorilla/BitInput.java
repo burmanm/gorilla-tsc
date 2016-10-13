@@ -21,4 +21,12 @@ public interface BitInput {
      * @return reads the next long in the series using bits meaningful bits
      */
     long getLong(int bits);
+
+    /**
+     * Read until next unset bit is found, or until maxBits has been reached.
+     *
+     * @param maxBits How many bits at maximum until returning
+     * @return Integer value of the read bits
+     */
+    int nextClearBit(int maxBits);
 }

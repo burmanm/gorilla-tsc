@@ -34,6 +34,9 @@ public class EncodingBenchmark {
         public ByteBuffer uncompressedBuffer;
         public ByteBuffer compressedBuffer;
 
+        public long[] uncompressedLongs;
+        public double[] uncompressedDoubles;
+
         @Setup(Level.Trial)
         public void setup() {
             blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
@@ -45,10 +48,19 @@ public class EncodingBenchmark {
 
             ByteBuffer bb = ByteBuffer.allocate(amountOfPoints * 2*Long.BYTES);
 
+            uncompressedLongs = new long[amountOfPoints*2];
+            uncompressedDoubles = new double[amountOfPoints];
+
+            int j = 0;
             for(int i = 0; i < amountOfPoints; i++) {
                 now += 60;
                 bb.putLong(now);
                 bb.putDouble(i);
+
+                uncompressedLongs[j++] = now;
+                uncompressedLongs[j++] = i;
+                uncompressedDoubles[j++] = i;
+
 //                bb.putLong(i);
             }
 
@@ -62,7 +74,7 @@ public class EncodingBenchmark {
 
             bb.flip();
 
-            for(int j = 0; j < amountOfPoints; j++) {
+            for(int k = 0; k < amountOfPoints; k++) {
 //                c.addValue(bb.getLong(), bb.getLong());
                 c.addValue(bb.getLong(), bb.getDouble());
             }
@@ -75,28 +87,56 @@ public class EncodingBenchmark {
         }
     }
 
-    @Benchmark
-    @OperationsPerInvocation(100000)
-    public void encodingBenchmark(DataGenerator dg) {
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
-        Compressor c = new Compressor(dg.blockStart, output);
+//    @Benchmark
+//    @OperationsPerInvocation(100000)
+//    public void encodingBenchmarkByteBufferBitOutput(DataGenerator dg) {
+//        ByteBufferBitOutput output = new ByteBufferBitOutput();
+//        Compressor c = new Compressor(dg.blockStart, output);
+//
+//        for(int j = 0; j < dg.amountOfPoints; j++) {
+//            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getDouble());
+//        }
+//        c.close();
+//        dg.uncompressedBuffer.rewind();
+//    }
+//
+//    @Benchmark
+//    @OperationsPerInvocation(100000)
+//    public void encodingBenchmarkByteBufferBitOutputLong(DataGenerator dg) {
+//        ByteBufferBitOutput output = new ByteBufferBitOutput();
+//        Compressor c = new Compressor(dg.blockStart, output);
+//
+//        int i = 0;
+//        for(int j = 0; j < dg.amountOfPoints; j++) {
+//            c.addValue(dg.uncompressedLongs[i++], dg.uncompressedLongs[i++]);
+//        }
+//        c.close();
+//    }
+//
+//    @Benchmark
+//    @OperationsPerInvocation(100000)
+//    public void encodingBenchmarkByteBufferBitOutputDouble(DataGenerator dg) {
+//        ByteBufferBitOutput output = new ByteBufferBitOutput();
+//        Compressor c = new Compressor(dg.blockStart, output);
+//
+//        int i = 0;
+//        for(int j = 0; j < dg.amountOfPoints; j++) {
+//            c.addValue(dg.uncompressedLongs[i++], dg.uncompressedDoubles[j]);
+//            i++;
+//        }
+//        c.close();
+//    }
 
-        for(int j = 0; j < dg.amountOfPoints; j++) {
-            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getDouble());
-        }
-        c.close();
-        dg.uncompressedBuffer.rewind();
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(100000)
-    public void decodingDoubleBenchmark(DataGenerator dg, Blackhole bh) throws Exception {
-        ByteBuffer duplicate = dg.compressedBuffer.duplicate();
-        ByteBufferBitInput input = new ByteBufferBitInput(duplicate);
-        Decompressor d = new Decompressor(input);
-        Pair pair;
-        while((pair = d.readPair()) != null) {
-            bh.consume(pair);
-        }
-    }
+    //
+//    @Benchmark
+//    @OperationsPerInvocation(100000)
+//    public void decodingDoubleBenchmarkByteBufferBitInput(DataGenerator dg, Blackhole bh) throws Exception {
+//        ByteBuffer duplicate = dg.compressedBuffer.duplicate();
+//        ByteBufferBitInput input = new ByteBufferBitInput(duplicate);
+//        Decompressor d = new Decompressor(input);
+//        Pair pair;
+//        while((pair = d.readPair()) != null) {
+//            bh.consume(pair);
+//        }
+//    }
 }

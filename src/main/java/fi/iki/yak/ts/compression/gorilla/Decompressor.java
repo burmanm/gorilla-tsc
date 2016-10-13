@@ -58,18 +58,7 @@ public class Decompressor {
     }
 
     private int bitsToRead() {
-        int val = 0x00;
-
-        for(int i = 0; i < 4; i++) {
-            val <<= 1;
-            boolean bit = in.readBit();
-            if(bit) {
-                val |= 0x01;
-            } else {
-                break;
-            }
-        }
-
+        int val = in.nextClearBit(4);
         int toRead = 0;
 
         switch(val) {
@@ -120,10 +109,11 @@ public class Decompressor {
     }
 
     private void nextValue() {
-        // Read value
-        if (in.readBit()) {
-            // else -> same value as before
-            if (in.readBit()) {
+        long value;
+        int val = in.nextClearBit(2);
+
+        switch(val) {
+            case 3:
                 // New leading and trailing zeros
                 storedLeadingZeros = (int) in.getLong(5);
 
@@ -132,11 +122,13 @@ public class Decompressor {
                     significantBits = 64;
                 }
                 storedTrailingZeros = 64 - significantBits - storedLeadingZeros;
-            }
-            long value = in.getLong(64 - storedLeadingZeros - storedTrailingZeros);
-            value <<= storedTrailingZeros;
-            value = storedVal ^ value;
-            storedVal = value;
+                // missing break is intentional, we want to overflow to next one
+            case 2:
+                value = in.getLong(64 - storedLeadingZeros - storedTrailingZeros);
+                value <<= storedTrailingZeros;
+                value = storedVal ^ value;
+                storedVal = value;
+                break;
         }
     }
 
