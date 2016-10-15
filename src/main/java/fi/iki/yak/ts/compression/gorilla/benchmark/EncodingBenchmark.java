@@ -34,8 +34,8 @@ public class EncodingBenchmark {
         public ByteBuffer uncompressedBuffer;
         public ByteBuffer compressedBuffer;
 
-        public long[] uncompressedLongs;
-        public double[] uncompressedDoubles;
+//        public long[] uncompressedLongs;
+//        public double[] uncompressedDoubles;
 
         @Setup(Level.Trial)
         public void setup() {
@@ -48,8 +48,8 @@ public class EncodingBenchmark {
 
             ByteBuffer bb = ByteBuffer.allocate(amountOfPoints * 2*Long.BYTES);
 
-            uncompressedLongs = new long[amountOfPoints*2];
-            uncompressedDoubles = new double[amountOfPoints];
+//            uncompressedLongs = new long[amountOfPoints*2];
+//            uncompressedDoubles = new double[amountOfPoints];
 
             int j = 0;
             for(int i = 0; i < amountOfPoints; i++) {
@@ -57,9 +57,9 @@ public class EncodingBenchmark {
                 bb.putLong(now);
                 bb.putDouble(i);
 
-                uncompressedLongs[j++] = now;
-                uncompressedLongs[j++] = i;
-                uncompressedDoubles[j++] = i;
+//                uncompressedLongs[j++] = now;
+//                uncompressedLongs[j++] = i;
+//                uncompressedDoubles[i] = i;
 
 //                bb.putLong(i);
             }
@@ -87,19 +87,19 @@ public class EncodingBenchmark {
         }
     }
 
-//    @Benchmark
-//    @OperationsPerInvocation(100000)
-//    public void encodingBenchmarkByteBufferBitOutput(DataGenerator dg) {
-//        ByteBufferBitOutput output = new ByteBufferBitOutput();
-//        Compressor c = new Compressor(dg.blockStart, output);
-//
-//        for(int j = 0; j < dg.amountOfPoints; j++) {
-//            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getDouble());
-//        }
-//        c.close();
-//        dg.uncompressedBuffer.rewind();
-//    }
-//
+    @Benchmark
+    @OperationsPerInvocation(100000)
+    public void encodingBenchmarkByteBufferBitOutput(DataGenerator dg) {
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        Compressor c = new Compressor(dg.blockStart, output);
+
+        for(int j = 0; j < dg.amountOfPoints; j++) {
+            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getDouble());
+        }
+        c.close();
+        dg.uncompressedBuffer.rewind();
+    }
+
 //    @Benchmark
 //    @OperationsPerInvocation(100000)
 //    public void encodingBenchmarkByteBufferBitOutputLong(DataGenerator dg) {
@@ -108,10 +108,23 @@ public class EncodingBenchmark {
 //
 //        int i = 0;
 //        for(int j = 0; j < dg.amountOfPoints; j++) {
-//            c.addValue(dg.uncompressedLongs[i++], dg.uncompressedLongs[i++]);
+//            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getLong());
 //        }
 //        c.close();
 //    }
+
+    @Benchmark
+    @OperationsPerInvocation(100000)
+    public void encodingBenchmarkByteBufferBitOutputProto(DataGenerator dg) {
+        ByteBufferBitOutputProto output = new ByteBufferBitOutputProto();
+        Compressor c = new Compressor(dg.blockStart, output);
+
+        for(int j = 0; j < dg.amountOfPoints; j++) {
+            c.addValue(dg.uncompressedBuffer.getLong(), dg.uncompressedBuffer.getDouble());
+        }
+        c.close();
+        dg.uncompressedBuffer.rewind();
+    }
 //
 //    @Benchmark
 //    @OperationsPerInvocation(100000)

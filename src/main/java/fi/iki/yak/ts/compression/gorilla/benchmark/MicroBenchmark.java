@@ -46,9 +46,11 @@ public class MicroBenchmark {
         public int[] intBits;
         public long[] longBits;
         public byte[] bytes;
+        public byte[] BITMASKS;
 
         @Setup(Level.Trial)
         public void setup() {
+            BITMASKS = new byte[8];
             masks = new long[8];
             bits = new boolean[8];
             byteBits = new byte[2][8];
@@ -63,6 +65,7 @@ public class MicroBenchmark {
                 byteBits[0][i] = 0;
                 longBits[i] = Long.MAX_VALUE;
                 bytes[i] = (byte) 0xFF;
+                BITMASKS[i] = (byte) ((1 << i) - 1);
             }
         }
     }
@@ -85,38 +88,35 @@ public class MicroBenchmark {
 //        bh.consume(a);
 //    }
 
-    @Benchmark
-    public void writeBit(DataGenerator dg, Blackhole bh) {
-        byte b = 0;
-
-        for(int i = 0; i < dg.bits.length; i++) {
-            if(dg.bits[i]) b |= (1 << (i - 1));
-        }
-        bh.consume(b);
-    }
-
-    @Benchmark
-    public void writeTargetBit(DataGenerator dg, Blackhole bh) {
-        byte b = 0;
-
-        for(int i = 0; i < dg.byteBits.length; i++) {
-            b |= dg.byteBits[dg.intBits[i]][i];
-        }
-        bh.consume(b);
-    }
-
-    @Benchmark
-    public void writeBranchlessBit(DataGenerator dg, Blackhole bh) {
-        byte b = 0;
-        int trueish = 1;
-
-        for(int i = 0; i < dg.bits.length; i++) {
-            b = (byte) ((b & ~(1 << i)) | (trueish << i));
-//            b = (b & ~m) | (-f & m);
-        }
-        bh.consume(b);
-    }
-
+//    @Benchmark
+//    public void writeBooleanBit(DataGenerator dg, Blackhole bh) {
+//        byte b = 0;
+//
+//        for(int i = 0; i < dg.bits.length; i++) {
+//            if(dg.bits[i]) b |= (1 << (i - 1));
+//        }
+//        bh.consume(b);
+//    }
+//
+//    @Benchmark
+//    public void writeLookupBit(DataGenerator dg, Blackhole bh) {
+//        byte b = 0;
+//
+//        for(int i = 0; i < dg.byteBits.length; i++) {
+//            b |= dg.byteBits[dg.intBits[i]][i];
+//        }
+//        bh.consume(b);
+//    }
+//
+//    @Benchmark
+//    public void writeAlwaysIntBit(DataGenerator dg, Blackhole bh) {
+//        byte b = 0;
+//
+//        for(int i = 0; i < dg.bits.length; i++) {
+//            b |= (dg.intBits[i] << (i - 1));
+//        }
+//        bh.consume(b);
+//    }
 
 
     // These were optimized away .. meh.
@@ -155,72 +155,53 @@ public class MicroBenchmark {
 //        bh.consume(val);
 //    }
 
-    @Benchmark
-    public void getLong(DataGenerator dg, Blackhole bh) {
-        long value = 0;
-        int bits = 29;
-        int i = 0;
-        byte b = dg.bytes[i];
-        int bitsLeft = 3;
-        while(bits > 0) {
-            if(bits > bitsLeft || bits == Byte.SIZE) {
-                // Take only the bitsLeft "least significant" bits
-                byte d = (byte) (b & ((1<<bitsLeft) - 1));
-                value = (value << bitsLeft) + (d & 0xFF);
-                bits -= bitsLeft;
-                bitsLeft = 0;
-            } else {
-                // Shift to correct position and take only least significant bits
-                byte d = (byte) ((b >>> (bitsLeft - bits)) & ((1<<bits) - 1));
-                value = (value << bits) + (d & 0xFF);
-                bitsLeft -= bits;
-                bits = 0;
-            }
-            if(bitsLeft == 0) {
-                b = dg.bytes[++i];
-                bitsLeft = 8;
-            }
-        }
-        bh.consume(value);
-    }
-
-    @Benchmark
-    public void targetGetLong(DataGenerator dg, Blackhole bh) {
-        long value = 0;
-        int i = 0;
-        byte b = dg.bytes[i];
-        int bitsLeft = 3;
-        byte d = (byte) (b & ((1<<bitsLeft) - 1));
-        value = (value << bitsLeft) + (d & 0xFF);
-        b = dg.bytes[++i];
-        for(int j = 0; j < 3; j++) {
-            value = (value << 8) + b;
-            b = dg.bytes[++i];
-        }
-        d = (byte) ((b >>> 6) & ((1<<2) - 1));
-        value = (value << 2) + (d & 0xFF);
-        bh.consume(value);
-    }
-
-    @Benchmark
-    public void targetGetLongFromLong(DataGenerator dg, Blackhole bh) {
-        long value = 0;
-        int i = 0;
-        byte b = dg.bytes[i];
-        int bitsLeft = 3;
-        byte d = (byte) (b & ((1<<bitsLeft) - 1));
-        value = (value << bitsLeft) + (d & 0xFF);
-        b = dg.bytes[++i];
-        for(int j = 0; j < 3; j++) {
-            value = (value << 8) + b;
-            b = dg.bytes[++i];
-        }
-        d = (byte) ((b >>> 6) & ((1<<2) - 1));
-        value = (value << 2) + (d & 0xFF);
-        bh.consume(value);
-    }
-
+//    @Benchmark
+//    public void getLong(DataGenerator dg, Blackhole bh) {
+//        long value = 0;
+//        int bits = 29;
+//        int i = 0;
+//        byte b = dg.bytes[i];
+//        int bitsLeft = 3;
+//        while(bits > 0) {
+//            if(bits > bitsLeft || bits == Byte.SIZE) {
+//                // Take only the bitsLeft "least significant" bits
+//                byte d = (byte) (b & ((1<<bitsLeft) - 1));
+//                value = (value << bitsLeft) + (d & 0xFF);
+//                bits -= bitsLeft;
+//                bitsLeft = 0;
+//            } else {
+//                // Shift to correct position and take only least significant bits
+//                byte d = (byte) ((b >>> (bitsLeft - bits)) & ((1<<bits) - 1));
+//                value = (value << bits) + (d & 0xFF);
+//                bitsLeft -= bits;
+//                bits = 0;
+//            }
+//            if(bitsLeft == 0) {
+//                b = dg.bytes[++i];
+//                bitsLeft = 8;
+//            }
+//        }
+//        bh.consume(value);
+//    }
 //
+//    @Benchmark
+//    public void targetGetLong(DataGenerator dg, Blackhole bh) {
+//        long value = 0;
+//        int i = 0;
+//        byte b = dg.bytes[i];
+//        int bitsLeft = 3;
+//        byte d = (byte) (b & ((1<<bitsLeft) - 1));
+//        value = (value << bitsLeft) + (d & 0xFF);
+//        b = dg.bytes[++i];
+//        for(int j = 0; j < 3; j++) {
+//            value = (value << 8) + b;
+//            b = dg.bytes[++i];
+//        }
+//        d = (byte) ((b >>> 6) & ((1<<2) - 1));
+//        value = (value << 2) + (d & 0xFF);
+//        bh.consume(value);
+//    }
+
 //    @Benchmark
 //    public void writeBits(DataGenerator dg, Blackhole bh) {
 //        int bits = 29;
@@ -248,4 +229,127 @@ public class MicroBenchmark {
 //        }
 //        bh.consume(bytes);
 //    }
+//
+//    @Benchmark
+//    public void writeBitsOptimized(DataGenerator dg, Blackhole bh) {
+//        int bits = 29;
+//        long value = 3457457472L;
+//        byte[] bytes = new byte[8];
+//        int bitsLeft = 3;
+//        int i = 0;
+//        byte b = 0;
+//        if(bits > bitsLeft) {
+//            // Single run, fetch the available bits
+//            // First the first 3
+//            int shift = bits - bitsLeft;
+//            b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
+//            bytes[i++] = b;
+//            b = 0; // flipByte
+//            // Then everything that's > 8 ..
+//            shift -= bitsLeft;
+//            bits -= bitsLeft;
+//            for(int j = 0; j < (bits / Byte.SIZE); j++) {
+//                b |= (byte) ((value) >> shift) & 0xFF;
+//                bytes[i++] = b;
+//                b = 0;
+//                shift -= 8;
+//                bits -= 8;
+//            }
+//            // 2 bits left
+//            b |= (byte) (value << (8-bits));
+//            bytes[i++] = b;
+//        } else {
+//            // We need a partial.. damn .. or do we? Could we.. mm, table lookup first
+//            // and then continue with the rest?
+//        }
+//        bh.consume(bytes);
+//    }
+
+//    @Benchmark
+    public void writeBitsReality(DataGenerator dg, Blackhole bh) {
+        int bits = 29;
+        long value = 3457457472L;
+        byte[] bytes = new byte[8];
+        int bitsLeft = 3;
+        int i = 0;
+        byte b = 0;
+        if(bits > bitsLeft) {
+            int shift = bits - bitsLeft;
+            b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1)); // should latter be table lookup? Needs testing!
+            bits -= bitsLeft;
+            bytes[i++] = b;
+            b = 0; // flipByte
+
+            // Then everything that's full bits
+            int loops = (bits / Byte.SIZE);
+            for(int j = 0; j < loops; ++j) {
+                shift = bits - bitsLeft;
+                b |= (byte) ((value) >> shift) & 0xFF; // TODO Do I need the AND?
+                bytes[i++] = b;
+                b = 0; // flipByte
+                bits -= Byte.SIZE;
+            }
+
+            // Then the remaining bits
+//            bits -= loops * Byte.SIZE;
+            if(bits > 0) {
+                shift = bitsLeft - bits;
+                b |= (byte) (value << shift);
+                bitsLeft -= bits;
+            }
+
+            // No need to do checkAndFlipByte here, we know there's space (otherwise last loop would have been triggered)
+        } else {
+            int shift = bitsLeft - bits;
+            b |= (byte) (value << shift);
+            bitsLeft -= bits;
+            // No need to do checkAndFlipByte here, we know there's space (otherwise last if would have been triggered)
+        }
+        bh.consume(bytes);
+    }
+
+//    @Benchmark
+    public void writeBitsRealityProto(DataGenerator dg, Blackhole bh) {
+        int bits = 29;
+        long value = 3457457472L;
+        byte[] bytes = new byte[8];
+        int bitsLeft = 3;
+        int i = 0;
+        byte b = 0;
+        if(bits > bitsLeft) {
+            int shift = bits - bitsLeft;
+            b |= (byte) ((value >> shift) & dg.BITMASKS[bitsLeft]);
+            // lookup? Needs
+            // testing!
+            bits -= bitsLeft;
+            bytes[i++] = b;
+            b = 0; // flipByte
+
+            // Then everything that's full bits
+            int loops = (bits / Byte.SIZE);
+            for(int j = 0; j < loops; ++j) {
+                shift = bits - bitsLeft;
+                b |= (byte) ((value) >> shift);
+                bytes[i++] = b;
+                b = 0; // flipByte
+                bits -= Byte.SIZE;
+            }
+
+            // Then the remaining bits
+//            bits -= loops * Byte.SIZE;
+            if(bits > 0) { // duplicate code with the below one.. remove
+                shift = bitsLeft - bits;
+                b |= (byte) (value << shift);
+                bitsLeft -= bits;
+            }
+
+            // No need to do checkAndFlipByte here, we know there's space (otherwise last loop would have been triggered)
+        } else {
+            int shift = bitsLeft - bits;
+            b |= (byte) (value << shift);
+            bitsLeft -= bits;
+            // No need to do checkAndFlipByte here, we know there's space (otherwise last if would have been triggered)
+        }
+        bh.consume(bytes);
+    }
 }
