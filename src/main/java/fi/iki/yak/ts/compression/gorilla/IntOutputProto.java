@@ -1,23 +1,22 @@
 package fi.iki.yak.ts.compression.gorilla;
 
-import java.nio.ByteBuffer;
-
 /**
  * An implementation of BitOutput interface that uses off-heap storage.
  *
  * @author Michael Burman
  */
-public class ByteBufferBitOutputProto implements BitOutput {
-    public static final int DEFAULT_ALLOCATION = 4096;
+public class IntOutputProto implements BitOutput {
+    public static final int DEFAULT_ALLOCATION =  4096*256;
 
-    private ByteBuffer bb;
-    private byte b;
-    private int bitsLeft = Byte.SIZE;
+    private int[] intArray;
+    private int iB;
+    private int position = 0;
+    private int bitsLeft = Integer.SIZE;
 
     /**
      * Creates a new ByteBufferBitOutput with a default allocated size of 4096 bytes.
      */
-    public ByteBufferBitOutputProto() {
+    public IntOutputProto() {
         this(DEFAULT_ALLOCATION);
     }
 
@@ -26,17 +25,15 @@ public class ByteBufferBitOutputProto implements BitOutput {
      *
      * @param initialSize New initialsize to use
      */
-    public ByteBufferBitOutputProto(int initialSize) {
-        bb = ByteBuffer.allocateDirect(initialSize);
-        b = bb.get(bb.position());
+    public IntOutputProto(int initialSize) {
+        intArray = new int[initialSize];
+        iB = intArray[position];
     }
 
     private void expandAllocation() {
-        ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity()*2);
-        bb.flip();
-        largerBB.put(bb);
-        largerBB.position(bb.capacity());
-        bb = largerBB;
+        int[] largerArray = new int[intArray.length*2];
+        System.arraycopy(intArray, 0, largerArray, 0, intArray.length);
+        intArray = largerArray;
     }
 
     private void checkAndFlipByte() {
@@ -46,12 +43,13 @@ public class ByteBufferBitOutputProto implements BitOutput {
     }
 
     private void flipByte() {
-        bb.put(b);
-        if(!bb.hasRemaining()) { // Could I get rid of this?
+        intArray[position] = iB;
+        ++position;
+        if(position == (intArray.length - 1)) {
             expandAllocation();
         }
-        b = 0; // Do I need even this?
-        bitsLeft = Byte.SIZE;
+        iB = 0; // Do I need even this?
+        bitsLeft = Integer.SIZE;
     }
 
     /**
@@ -61,7 +59,7 @@ public class ByteBufferBitOutputProto implements BitOutput {
      */
     public void writeBit(boolean bit) {
         if(bit) {
-            b |= (1 << (bitsLeft - 1));
+            iB |= (1 << (bitsLeft - 1));
         }
         bitsLeft--;
         checkAndFlipByte();
@@ -79,30 +77,30 @@ public class ByteBufferBitOutputProto implements BitOutput {
         if(bits > bitsLeft) {
             // First fill the current open byte
             int shift = bits - bitsLeft;
-            b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1)); // should latter be table lookup? Needs testing!
+            iB |= ((value >> shift) & ((1 << bitsLeft) - 1)); // should latter be table lookup? Needs testing!
             bits -= bitsLeft;
             flipByte();
 
             // Then write full bytes
-            int loops = (bits / Byte.SIZE);
+            int loops = (bits / Integer.SIZE);
             for(int j = 0; j < loops; ++j) {
                 shift = bits - bitsLeft;
-                b |= (byte) ((value) >> shift); // TODO Do I need the AND?
+                iB |= ((value) >> shift); // TODO Do I need the AND?
                 flipByte();
-                bits -= Byte.SIZE;
+                bits -= Integer.SIZE;
             }
 
             // Then the remaining bits
             if(bits > 0) {
                 shift = bitsLeft - bits;
-                b |= (byte) (value << shift);
+                iB |= (value << shift);
                 bitsLeft -= bits;
             }
 
             // No need to do checkAndFlipByte here, we know there's space (otherwise last loop would have been triggered)
         } else {
             int shift = bitsLeft - bits;
-            b |= (byte) (value << shift);
+            iB |= (value << shift);
             bitsLeft -= bits;
             // No need to do checkAndFlipByte here, we know there's space (otherwise last if would have been triggered)
         }
@@ -121,7 +119,7 @@ public class ByteBufferBitOutputProto implements BitOutput {
      *
      * @return ByteBuffer of type DirectByteBuffer
      */
-    public ByteBuffer getByteBuffer() {
-        return this.bb;
-    }
+//    public ByteBuffer getByteBuffer() {
+//        return this.bb;
+//    }
 }

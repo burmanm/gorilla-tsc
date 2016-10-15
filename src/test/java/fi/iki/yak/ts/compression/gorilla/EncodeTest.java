@@ -26,7 +26,7 @@ public class EncodeTest {
         long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        ByteBufferBitOutputProto output = new ByteBufferBitOutputProto();
 
         Compressor c = new Compressor(now, output);
 
@@ -67,7 +67,7 @@ public class EncodeTest {
     void testEncodeSimilarFloats() throws Exception {
         long now = LocalDateTime.of(2015, Month.MARCH, 02, 00, 00).toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        ByteBufferBitOutputProto output = new ByteBufferBitOutputProto();
         Compressor c = new Compressor(now, output);
 
         ByteBuffer bb = ByteBuffer.allocate(5 * 2*Long.BYTES);
@@ -109,7 +109,7 @@ public class EncodeTest {
     }
 
     /**
-     * Tests writing enough large amount of datapoints that causes the included ByteBufferBitOutput to do
+     * Tests writing enough large amount of datapoints that causes the included ByteBufferBitOutputProto to do
      * internal byte array expansion.
      */
     @Test
@@ -118,7 +118,7 @@ public class EncodeTest {
         int amountOfPoints = 100000;
         long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        ByteBufferBitOutputProto output = new ByteBufferBitOutputProto();
 
         long now = blockStart + 60;
         ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);
@@ -164,7 +164,7 @@ public class EncodeTest {
         long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        ByteBufferBitOutputProto output = new ByteBufferBitOutputProto();
 
         Compressor c = new Compressor(now, output);
         c.close();
@@ -187,7 +187,7 @@ public class EncodeTest {
         int amountOfPoints = 10000;
         long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        ByteBufferBitOutputProto output = new ByteBufferBitOutputProto();
 
         long now = blockStart + 60;
         ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);

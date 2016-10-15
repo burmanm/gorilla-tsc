@@ -1,23 +1,22 @@
 package fi.iki.yak.ts.compression.gorilla;
 
-import java.nio.ByteBuffer;
-
 /**
  * An implementation of BitOutput interface that uses off-heap storage.
  *
  * @author Michael Burman
  */
-public class ByteBufferBitOutputProto implements BitOutput {
-    public static final int DEFAULT_ALLOCATION = 4096;
+public class ByteOutputProto implements BitOutput {
+    public static final int DEFAULT_ALLOCATION =  4096*1024;
 
-    private ByteBuffer bb;
+    private byte[] bArray;
     private byte b;
+    private int position = 0;
     private int bitsLeft = Byte.SIZE;
 
     /**
      * Creates a new ByteBufferBitOutput with a default allocated size of 4096 bytes.
      */
-    public ByteBufferBitOutputProto() {
+    public ByteOutputProto() {
         this(DEFAULT_ALLOCATION);
     }
 
@@ -26,17 +25,15 @@ public class ByteBufferBitOutputProto implements BitOutput {
      *
      * @param initialSize New initialsize to use
      */
-    public ByteBufferBitOutputProto(int initialSize) {
-        bb = ByteBuffer.allocateDirect(initialSize);
-        b = bb.get(bb.position());
+    public ByteOutputProto(int initialSize) {
+        bArray = new byte[initialSize];
+        b = bArray[position];
     }
 
     private void expandAllocation() {
-        ByteBuffer largerBB = ByteBuffer.allocateDirect(bb.capacity()*2);
-        bb.flip();
-        largerBB.put(bb);
-        largerBB.position(bb.capacity());
-        bb = largerBB;
+        byte[] largerArray = new byte[bArray.length*2];
+        System.arraycopy(bArray, 0, largerArray, 0, bArray.length);
+        bArray = largerArray;
     }
 
     private void checkAndFlipByte() {
@@ -46,8 +43,9 @@ public class ByteBufferBitOutputProto implements BitOutput {
     }
 
     private void flipByte() {
-        bb.put(b);
-        if(!bb.hasRemaining()) { // Could I get rid of this?
+        bArray[position] = b;
+        ++position;
+        if(position == (bArray.length - 1)) {
             expandAllocation();
         }
         b = 0; // Do I need even this?
@@ -87,7 +85,7 @@ public class ByteBufferBitOutputProto implements BitOutput {
             int loops = (bits / Byte.SIZE);
             for(int j = 0; j < loops; ++j) {
                 shift = bits - bitsLeft;
-                b |= (byte) ((value) >> shift); // TODO Do I need the AND?
+                b |= (byte) ((value) >> shift) & 0xFF; // TODO Do I need the AND?
                 flipByte();
                 bits -= Byte.SIZE;
             }
@@ -121,7 +119,7 @@ public class ByteBufferBitOutputProto implements BitOutput {
      *
      * @return ByteBuffer of type DirectByteBuffer
      */
-    public ByteBuffer getByteBuffer() {
-        return this.bb;
-    }
+//    public ByteBuffer getByteBuffer() {
+//        return this.bb;
+//    }
 }
