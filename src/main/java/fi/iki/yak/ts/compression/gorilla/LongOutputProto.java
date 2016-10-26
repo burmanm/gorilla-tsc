@@ -1,12 +1,15 @@
 package fi.iki.yak.ts.compression.gorilla;
 
+import java.nio.ByteBuffer;
+import java.nio.LongBuffer;
+
 /**
  * An implementation of BitOutput interface that uses off-heap storage.
  *
  * @author Michael Burman
  */
 public class LongOutputProto implements BitOutput {
-    public static final int DEFAULT_ALLOCATION =  4096*128;
+    public static final int DEFAULT_ALLOCATION =  4096*32;
 
     private long[] longArray;
     private long lB;
@@ -45,9 +48,16 @@ public class LongOutputProto implements BitOutput {
     private void flipByte() {
         longArray[position] = lB;
         ++position;
-        if(position == (longArray.length - 1)) {
+        if(position >= (longArray.length - 2)) { // We want to have always at least 2 longs available
             expandAllocation();
         }
+        lB = 0; // Do I need even this?
+        bitsLeft = Long.SIZE;
+    }
+
+    private void flipByteWithoutExpandCheck() {
+        longArray[position] = lB;
+        ++position;
         lB = 0; // Do I need even this?
         bitsLeft = Long.SIZE;
     }
@@ -74,35 +84,19 @@ public class LongOutputProto implements BitOutput {
      * @param bits How many bits are stored to the stream
      */
     public void writeBits(long value, int bits) {
-        if(bits > bitsLeft) {
-            // First fill the current open byte
-            int shift = bits - bitsLeft;
-            lB |= ((value >> shift) & ((1 << bitsLeft) - 1)); // should latter be table lookup? Needs testing!
-            bits -= bitsLeft;
-            flipByte();
-
-            // Then write full bytes
-            int loops = (bits / Long.SIZE);
-            for(int j = 0; j < loops; ++j) {
-                shift = bits - bitsLeft;
-                lB |= ((value) >> shift); // TODO Do I need the AND?
-                flipByte();
-                bits -= Long.SIZE;
-            }
-
-            // Then the remaining bits
-            if(bits > 0) {
-                shift = bitsLeft - bits;
-                lB |= (value << shift);
-                bitsLeft -= bits;
-            }
-
-            // No need to do checkAndFlipByte here, we know there's space (otherwise last loop would have been triggered)
-        } else {
-            int shift = bitsLeft - bits;
-            lB |= (value << shift);
+        if(bits <= bitsLeft) {
+            int bitsToWrite = bitsLeft - bits;
+            lB |= (value << bitsToWrite) & (1 << bitsToWrite - 1);
             bitsLeft -= bits;
-            // No need to do checkAndFlipByte here, we know there's space (otherwise last if would have been triggered)
+            checkAndFlipByte(); // We could be at 0 bits left because of the <= condition
+        } else {
+            value &= (1 << bits - 1); // turn to unsigned first
+            int bitsToWrite = bits - bitsLeft;
+            lB |= value >> bitsToWrite; // Fill the current word
+            flipByteWithoutExpandCheck();
+            bits -= bitsToWrite;
+            lB |= value << (64 - bits);
+            bitsLeft -= bits;
         }
     }
 
@@ -114,11 +108,24 @@ public class LongOutputProto implements BitOutput {
         flipByte(); // Causes write to the ByteBuffer
     }
 
+    public void reset() {
+        position = 0;
+        bitsLeft = Long.SIZE;
+        lB = 0;
+    }
+
     /**
      * Returns the underlying DirectByteBuffer
      *
      * @return ByteBuffer of type DirectByteBuffer
      */
+    public ByteBuffer getByteBuffer() {
+//        LongBuffer wrap = LongBuffer.wrap(longArray, 0, position);
+        ByteBuffer bb = ByteBuffer.allocate(position * 8);
+        bb.asLongBuffer().put(longArray, 0, position);
+        bb.position(position * 8);
+        return bb;
+    }
 //    public ByteBuffer getByteBuffer() {
 //        return this.bb;
 //    }
