@@ -1,5 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
+import java.util.stream.Stream;
+
 /**
  * Implements the time series compression as described in the Facebook's Gorilla Paper. Value compression
  * is for floating points only.
@@ -12,37 +14,39 @@ public class Compressor2 {
     private int storedTrailingZeros = 0;
     private long storedVal = 0;
     private long storedTimestamp = 0;
-    private long storedDelta = 0;
+    private int storedDelta = 0;
 
     private long blockTimestamp = 0;
 
-    public final static short FIRST_DELTA_BITS = 27;
+    public final static int FIRST_DELTA_BITS = 27;
     private static int NEW_LEADING_MASK = (0x03 << 11);
 
-    private static long DELTAD_7_MASK = 0x02 << 7;
-    private static long DELTAD_9_MASK = 0x06 << 9;
-    private static long DELTAD_12_MASK = 0x0E << 12;
+    private static int DELTAD_7_MASK = 0x02 << 7;
+    private static int DELTAD_9_MASK = 0x06 << 9;
+    private static int DELTAD_12_MASK = 0x0E << 12;
 //    private static long DELTAD_32_MASK = 0x0F << 32;
 
-    private BitOutput out;
+    private BitOutput2 out;
 
     // We should have access to the series?
-//    public Compressor2(long timestamp, BitOutput output) {
-//        blockTimestamp = timestamp;
-//        out = output;
-//        addHeader(timestamp);
-//    }
-
-    public Compressor2(long timestamp, BitOutput output, long firstTimestamp, double firstValue) {
+    public Compressor2(long timestamp, BitOutput2 output) {
         blockTimestamp = timestamp;
         out = output;
         addHeader(timestamp);
-        writeFirst(firstTimestamp, Double.doubleToRawLongBits(firstValue));
+    }
+
+    public void compressLongStream(Stream<Pair> stream) {
+        stream.peek(p -> writeFirst(p.getTimestamp(), Double.doubleToRawLongBits(p.getDoubleValue()))).skip(1)
+                .forEach(p -> {
+                    compressTimestamp(p.getTimestamp());
+                    compressValue(p.getLongValue());
+                });
     }
 
     private void addHeader(long timestamp) {
         // One byte: length of the first delta
         // One byte: precision of timestamps
+        System.out.printf("addHeader, timestamp->%d\n", timestamp);
         out.writeBits(timestamp, 64);
     }
 
@@ -56,6 +60,7 @@ public class Compressor2 {
         if(storedTimestamp == 0) {
             writeFirst(timestamp, value);
         } else {
+            System.out.println("Adding value");
             compressTimestamp(timestamp);
             compressValue(value);
         }
@@ -68,18 +73,21 @@ public class Compressor2 {
      * @param value next floating point value in the series
      */
     public void addValue(long timestamp, double value) {
-//        if(storedTimestamp == 0) {
-//            writeFirst(timestamp, Double.doubleToRawLongBits(value));
-//        } else {
-            compressTimestamp(timestamp);
-            compressValue(Double.doubleToRawLongBits(value));
-//        }
+        if(storedTimestamp == 0) {
+            writeFirst(timestamp, Double.doubleToRawLongBits(value));
+            return;
+        }
+        compressTimestamp(timestamp);
+        compressValue(Double.doubleToRawLongBits(value));
     }
 
     private void writeFirst(long timestamp, long value) {
-        storedDelta = timestamp - blockTimestamp;
+        storedDelta = (int) (timestamp - blockTimestamp);
         storedTimestamp = timestamp;
         storedVal = value;
+
+        System.out.printf("writeFirst: storedDelta->%d, storedTimestamp->%d, blockTimestamp->%d\n", storedDelta,
+                storedTimestamp, blockTimestamp);
 
         out.writeBits(storedDelta, FIRST_DELTA_BITS);
         out.writeBits(storedVal, 64);
@@ -92,7 +100,7 @@ public class Compressor2 {
         // These are selected to test interoperability and correctness of the solution, this can be read with go-tsz
         out.writeBits(0x0F, 4);
         out.writeBits(0xFFFFFFFF, 32);
-        out.writeBit(false);
+        out.skipBit();
         out.flush();
     }
 
@@ -105,14 +113,78 @@ public class Compressor2 {
      * @param timestamp epoch
      */
     private void compressTimestamp(long timestamp) {
+
+        System.out.printf("compressTimestamp->%d\n", timestamp);
+
         // a) Calculate the delta of delta
-        long newDelta = (timestamp - storedTimestamp);
-        long deltaD = newDelta - storedDelta;
+        int newDelta = (int) (timestamp - storedTimestamp);
+        int deltaD = newDelta - storedDelta;
+
+        // Don't do it this way!
+        // Check the highest set bit, that tells you how many are needed.
+
+        // TODO First, transform with zigZag to avoid negative numbers
+        // TODO Then, take highestOneBit and a switch clause?
+
+        // TODO Also, storing these as Long is insane.. we can't have larger than 27 bit delta in this block.
+        // TODO And we only support storing them as max 32 bits..
+
+        // TODO Remember to write to thesis..
+
+        // TODO Measure if vs. switch also.. or could we have some branchless idea (how on earth?)
+        // TODO Needs a better test, timestamps only
+        // TODO Also, check the assembly code of this switch clause.. does it turn to hashmap or table lookup?
+        // TODO I could force it to be a table lookup though.. there's only 32 possibilities..
+
+        // TODO Could I otherwise use the knowledge of limited range somehow? Huffman? Calculate deltas first and
+        // then find the maximum range..
+
+        // TODO To thesis: fluctuating values will in default mode cause always 64 bits write (-2, +2 for example)
+        // zigzag should reduce this to fewer bits (writeExisting probably)
+
+//        int bitsRequired = Integer.highestOneBit(deltaD);
+//
+//        switch(bitsRequired) {
+//            case 0:
+//                out.skipBit();
+//                break;
+//            case 1:
+//            case 2:
+//            case 3:
+//            case 4:
+//            case 5:
+//            case 6:
+//            case 7:
+////                deltaD |= DELTAD_7_MASK;
+////                out.writeBits(deltaD, 9);
+//                out.writeBits(0x02, 2); // store '10'
+//                out.writeBits(deltaD, 7);
+//                break;
+//            case 8:
+//            case 9:
+//                out.writeBits(0x06, 3); // store '110'
+//                out.writeBits(deltaD, 9);
+////                deltaD |= DELTAD_7_MASK;
+////                out.writeBits(deltaD, 9);
+//                break;
+//            case 10:
+//            case 11:
+//            case 12:
+////                out.writeBits(0x0E, 4); // store '1110'
+////                out.writeBits(deltaD, 12);
+//                out.writeBits(deltaD | DELTAD_12_MASK, 16);
+//                break;
+//            default:
+//                out.writeBits(0x0F, 4); // Store '1111'
+//                out.writeBits(deltaD, 32); // Store delta using 32 bits
+//                break;
+//        }
 
         // If delta is zero, write single 0 bit
         if(deltaD == 0) {
-            out.writeBit(false);
+            out.skipBit();
         } else if(deltaD >= -63 && deltaD <= 64) {
+            System.out.printf("Writing deltaD->%d\n", deltaD);
             out.writeBits(0x02, 2); // store '10'
             out.writeBits(deltaD, 7);
 //            deltaD |= DELTAD_7_MASK;
@@ -144,14 +216,27 @@ public class Compressor2 {
 
         if(xor == 0) {
             // Write 0
-            out.writeBit(false);
+            out.skipBit();
         } else {
             int leadingZeros = Long.numberOfLeadingZeros(xor);
             int trailingZeros = Long.numberOfTrailingZeros(xor);
 
             // Check overflow of leading? Can't be 32!
-            leadingZeros = Math.min(31, leadingZeros);
 
+            // TODO Change the format, store it with 6 bits (and allow max. 64, by doing leadingZeros - 1
+            // and then +1 in the reading phase. Avoids a branch. What if leadingZeros is 0? -1 is not possible Or is
+            // it? Missing something I should know..
+
+            if(leadingZeros >= 32) {
+                leadingZeros = 31;
+            }
+
+//            leadingZeros = Math.min(31, leadingZeros);
+//            --leadingZeros;
+
+            out.writeBit();
+
+            // This branch is something I can't avoid..
             if(leadingZeros >= storedLeadingZeros && trailingZeros >= storedTrailingZeros) {
                 writeExistingLeading(xor);
             } else {
@@ -169,13 +254,14 @@ public class Compressor2 {
      * @param xor XOR between previous value and current
      */
     private void writeExistingLeading(long xor) {
+        out.skipBit();
 //        out.writeBit(true);
 //        out.writeBit(false);
         int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
         xor >>>= storedTrailingZeros;
-        xor |= (0x02 << significantBits);
+//        xor |= (0x02 << significantBits);
 //        out.writeBits(0x02, 2);
-        out.writeBits(xor, significantBits+2);
+        out.writeBits(xor, significantBits);
     }
 
     /**
@@ -190,17 +276,22 @@ public class Compressor2 {
      */
     private void writeNewLeading(long xor, int leadingZeros, int trailingZeros) {
 //        out.writeBits(0x03, 2);
+        out.writeBit();
+
+
         int significantBits = 64 - leadingZeros - trailingZeros;
-        leadingZeros = ((leadingZeros << 6) | significantBits);
-        leadingZeros |= NEW_LEADING_MASK;
+//        leadingZeros = ((leadingZeros << 6) | significantBits);
+//        leadingZeros |= NEW_LEADING_MASK;
+
+
 //        out.writeBit(true);
-//        out.writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
+        out.writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
 //
-//        out.writeBits(significantBits, 6); // Length of meaningful bits in the next 6 bits
+        out.writeBits(significantBits, 6); // Length of meaningful bits in the next 6 bits
         // set bits 12 & 13 in leadingZeros..
-        out.writeBits(leadingZeros, 13);
-        xor >>>= trailingZeros;
-        out.writeBits(xor, significantBits); // Store the meaningful bits of XOR
+//        out.writeBits(leadingZeros, 13);
+//        xor >>>= trailingZeros;
+        out.writeBits(xor >>> trailingZeros, significantBits); // Store the meaningful bits of XOR
 
         storedLeadingZeros = leadingZeros;
         storedTrailingZeros = trailingZeros;
