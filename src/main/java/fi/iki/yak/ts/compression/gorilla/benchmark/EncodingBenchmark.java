@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -93,7 +92,7 @@ public class EncodingBenchmark {
     public void decodingDoubleBenchmark(DataGenerator dg, Blackhole bh) throws Exception {
         ByteBuffer duplicate = dg.compressedBuffer.duplicate();
         ByteBufferBitInput input = new ByteBufferBitInput(duplicate);
-        Decompressor d = new Decompressor(input);
+        Decompressor d = new Decompressor(input, dg.amountOfPoints);
         Pair pair;
         while((pair = d.readPair()) != null) {
             bh.consume(pair);
