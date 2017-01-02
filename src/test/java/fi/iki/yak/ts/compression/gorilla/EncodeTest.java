@@ -48,7 +48,7 @@ public class EncodeTest {
         byteBuffer.flip();
 
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        Decompressor d = new Decompressor(input, pairs.length);
 
         // Replace with stream once decompressor supports it
         for(int i = 0; i < pairs.length; i++) {
@@ -97,7 +97,7 @@ public class EncodeTest {
         byteBuffer.flip();
 
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        Decompressor d = new Decompressor(input, 5);
 
         // Replace with stream once decompressor supports it
         for(int i = 0; i < 5; i++) {
@@ -144,7 +144,7 @@ public class EncodeTest {
         byteBuffer.flip();
 
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        Decompressor d = new Decompressor(input, amountOfPoints);
 
         for(int i = 0; i < amountOfPoints; i++) {
             long tStamp = bb.getLong();
@@ -173,7 +173,7 @@ public class EncodeTest {
         byteBuffer.flip();
 
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        Decompressor d = new Decompressor(input, 0);
 
         assertNull(d.readPair());
     }
@@ -213,7 +213,7 @@ public class EncodeTest {
         byteBuffer.flip();
 
         ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        Decompressor d = new Decompressor(input, amountOfPoints);
 
         for(int i = 0; i < amountOfPoints; i++) {
             long tStamp = bb.getLong();

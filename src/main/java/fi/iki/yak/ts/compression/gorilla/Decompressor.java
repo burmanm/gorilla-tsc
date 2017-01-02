@@ -18,9 +18,12 @@ public class Decompressor {
     private boolean endOfStream = false;
 
     private BitInput in;
+	private int pairCount;
+	private int counter;
 
-    public Decompressor(BitInput input) {
+    public Decompressor(BitInput input, int pairCount) {
         in = input;
+		this.pairCount = pairCount;
         readHeader();
     }
 
@@ -42,19 +45,24 @@ public class Decompressor {
     }
 
     private void next() {
-        if (storedTimestamp == 0) {
+    	if (counter < pairCount) {
+           if (storedTimestamp == 0) {
             // First item to read
-            storedDelta = in.getLong(Compressor.FIRST_DELTA_BITS);
-            if(storedDelta == (1<<27) - 1) {
-                endOfStream = true;
-                return;
-            }
-            storedVal = in.getLong(64);
-            storedTimestamp = blockTimestamp + storedDelta;
-        } else {
-            nextTimestamp();
-            nextValue();
-        }
+               storedDelta = in.getLong(Compressor.FIRST_DELTA_BITS);
+//            if(storedDelta == (1<<27) - 1) {
+//                endOfStream = true;
+//                return;
+//            }
+               storedVal = in.getLong(64);
+               storedTimestamp = blockTimestamp + storedDelta;
+           } else {
+               nextTimestamp();
+               nextValue();
+           }
+           counter++;
+    	}else {
+    		endOfStream = true;
+    	}
     }
 
     private int bitsToRead() {
