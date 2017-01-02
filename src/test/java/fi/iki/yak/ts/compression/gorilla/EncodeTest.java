@@ -26,11 +26,20 @@ public class EncodeTest {
         long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        ByteBufferBitOutputProto output = new ByteBufferBitOutputProto();
+        LongOutputProto output = new LongOutputProto();
 
-        Compressor c = new Compressor(now, output);
+        Compressor2 c = new Compressor2(now, output);
 
         Pair[] pairs = {
+//                new Pair(now + 10, 1.0),
+//                new Pair(now + 20, -2.0),
+//                new Pair(now + 28, -2.5),
+//                new Pair(now + 84, Double.doubleToRawLongBits(65537)),
+//                new Pair(now + 400, Double.doubleToRawLongBits(2147483650.0)),
+//                new Pair(now + 2300, Double.doubleToRawLongBits(-16384)),
+//                new Pair(now + 16384, Double.doubleToRawLongBits(2.8)),
+//                new Pair(now + 16500, Double.doubleToRawLongBits(-38.0))
+//
                 new Pair(now + 10, Double.doubleToRawLongBits(1.0)),
                 new Pair(now + 20, Double.doubleToRawLongBits(-2.0)),
                 new Pair(now + 28, Double.doubleToRawLongBits(-2.5)),
@@ -41,20 +50,25 @@ public class EncodeTest {
                 new Pair(now + 16500, Double.doubleToRawLongBits(-38.0))
         };
 
-        Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getDoubleValue()));
+//        c.compressLongStream(Arrays.stream(pairs)); // TODO Should this return long[] ? Or stick to ByteBuffer?
+
+        Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getLongValue()));
         c.close();
 
         ByteBuffer byteBuffer = output.getByteBuffer();
         byteBuffer.flip();
 
-        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        LongInputProto input = new LongInputProto(output.getLongArray());
+//        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+
+        Decompressor2 d = new Decompressor2(input);
 
         // Replace with stream once decompressor supports it
+        // Or some other means of decompression.. without the object creation overhead?
         for(int i = 0; i < pairs.length; i++) {
-            Pair pair = d.readPair();
-            assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match");
-            assertEquals(pairs[i].getDoubleValue(), pair.getDoubleValue(), "Value did not match");
+            Pair pair = d.readPair(); // Replace with stream
+            assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match " + i);
+            assertEquals(pairs[i].getDoubleValue(), pair.getDoubleValue(), "Value did not match " + i);
         }
 
         assertNull(d.readPair());
