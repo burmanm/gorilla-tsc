@@ -41,11 +41,26 @@ import org.openjdk.jmh.infra.Blackhole;
 public class MicroBenchmark {
 
     public final static long[] BIT_MASKS;
+    public final static int[] BIT_MASKS_INT;
+    public final static int[] MASK_ARRAY;
 
     static {
+        MASK_ARRAY = new int[32];
+        int mask = 1;
+        int value = 0;
+        for (int i = 0; i < MASK_ARRAY.length; i++) {
+            value = value | mask;
+            mask = mask << 1;
+
+            MASK_ARRAY[i] = value;
+        }
         BIT_MASKS = new long[64];
         for(int i = 0; i < BIT_MASKS.length; i++) {
             BIT_MASKS[i] = (1L << i);
+        }
+        BIT_MASKS_INT = new int[32];
+        for(int i = 0; i < BIT_MASKS_INT.length; i++) {
+            BIT_MASKS_INT[i] = (1 << i);
         }
     }
 
@@ -62,6 +77,8 @@ public class MicroBenchmark {
         public int[] necessaryBits;
         public int[] bitsLeft;
 
+        public int[] bitSearches;
+
         @Setup(Level.Trial)
         public void setup() {
             BITMASKS = new byte[8];
@@ -74,6 +91,8 @@ public class MicroBenchmark {
             values = new long[8];
             bitsLeft = new int[8];
             necessaryBits = new int[8];
+            bitSearches = new int[]{0x00, 0x02, 0x06, 0x0e, 0x0F};
+
             for(int i = 0; i < bits.length; i++) {
                 masks[i] = (1 << (i - 1));
                 bits[i] = (i % 2 == 0);
@@ -205,7 +224,7 @@ public class MicroBenchmark {
         bh.consume(bytes);
     }
 
-    @Benchmark
+//    @Benchmark
     public void neededBitsInteger(DataGenerator dg, Blackhole bh) {
         for(int vals = 0; vals < dg.necessaryBits.length; vals++) {
             int bitsRequired = Integer.highestOneBit(vals);
@@ -213,11 +232,99 @@ public class MicroBenchmark {
         }
     }
 
-    @Benchmark
+//    @Benchmark
     public void neededBitsInteger2(DataGenerator dg, Blackhole bh) {
         for(int vals = 0; vals < dg.necessaryBits.length; vals++) {
             int bitsRequired = 32 - Integer.numberOfLeadingZeros(vals);
             bh.consume(bitsRequired);
         }
+    }
+
+    @Benchmark
+    public void nextZeroBit(DataGenerator dg, Blackhole bh) {
+        int valie = 0;
+
+        for(int i = 0; i < 4; i++) {
+            int val = 0x00;
+            int bitsLeft = 4;
+            for(int j = 0; j < bitsLeft; j++) {
+                val <<= 1;
+                boolean bit = ((dg.bitSearches[i] >> (bitsLeft - 1)) & 1) == 1;
+                bitsLeft--;
+                if(bit) {
+                    val |= 0x01;
+                } else {
+                    break;
+                }
+            }
+            valie += val;
+        }
+        bh.consume(valie);
+    }
+
+    @Benchmark
+    public void nextZeroBitMask(DataGenerator dg, Blackhole bh) {
+        int valie = 0;
+
+        for(int i = 0; i < 4; i++) {
+            int val = 0x00;
+            int bitsLeft = 4;
+            for(int j = 0; j < bitsLeft; j++) {
+                val <<= 1;
+                boolean bit = ((dg.bitSearches[i] & BIT_MASKS_INT[bitsLeft - 1]) != 0);
+                bitsLeft--;
+                if(bit) {
+                    val |= 0x01;
+                } else {
+                    break;
+                }
+            }
+            valie += val;
+        }
+        bh.consume(valie);
+    }
+
+    @Benchmark
+    public void nextZeroBitSingleSeek(DataGenerator dg, Blackhole bh) {
+        int bitsLeft = 4;
+        int valie = 0x00;
+
+        for(int i = 0; i < 4; i++) {
+            int val = (dg.bitSearches[i] >>> (64 - bitsLeft)) & MASK_ARRAY[bitsLeft];
+            switch(val) {
+                case 0x00:
+                case 0x01:
+                case 0x02:
+                case 0x03:
+                case 0x04:
+                case 0x05:
+                case 0x06:
+                case 0x07:
+                    val = 0x00;
+                    bitsLeft--;
+                    break;
+                case 0x08:
+                case 0x09:
+                case 0x0A:
+                case 0x0B:
+                    val = 0x02;
+                    bitsLeft -= 2;
+                    break;
+                case 0x0C:
+                case 0x0D:
+                    val = 0x06;
+                    bitsLeft -= 3;
+                    break;
+                case 0x0E:
+                    bitsLeft -= 4;
+                    break;
+                case 0x0F:
+                    val = 32;
+                    bitsLeft -= 4;
+                    break;
+            }
+            valie += val;
+        }
+        bh.consume(valie);
     }
 }

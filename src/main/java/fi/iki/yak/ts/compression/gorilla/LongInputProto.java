@@ -32,7 +32,7 @@ public class LongInputProto implements BitInput {
 
     @Override
     public boolean readBit() {
-        boolean bit = ((lB >> (bitsLeft - 1)) & 1) == 1;
+        boolean bit = (lB & LongOutputProto.BIT_SET_MASK[bitsLeft - 1]) != 0;
         bitsLeft--;
         checkAndFlipByte();
         return bit;
