@@ -86,9 +86,6 @@ public class Compressor2 {
         storedTimestamp = timestamp;
         storedVal = value;
 
-//        System.out.printf("writeFirst: storedDelta->%d, storedTimestamp->%d, blockTimestamp->%d\n", storedDelta,
-//                storedTimestamp, blockTimestamp);
-
         out.writeBits(storedDelta, FIRST_DELTA_BITS);
         out.writeBits(storedVal, 64);
     }
@@ -97,7 +94,6 @@ public class Compressor2 {
      * Closes the block and writes the remaining stuff to the BitOutput.
      */
     public void close() {
-        // These are selected to test interoperability and correctness of the solution, this can be read with go-tsz
         out.writeBits(0x0F, 4);
         out.writeBits(0xFFFFFFFF, 32);
         out.skipBit();

@@ -71,61 +71,40 @@ public class Decompressor2 {
         storedTimestamp = blockTimestamp + storedDelta;
     }
 
-    private int bitsToRead() {
-        int val = in.nextClearBit(4);
-        int toRead = 0;
-
-        // Or table lookup for prettier code?
-
-        switch(val) {
-            case 0x00:
-                break;
-            case 0x02:
-                toRead = 7; // '10'
-                break;
-            case 0x06:
-                toRead = 9; // '110'
-                break;
-            case 0x0e:
-                toRead = 12;
-                break;
-            case 0x0F:
-                toRead = 32;
-                break;
-        }
-
-        return toRead;
-    }
-
     private void nextTimestamp() {
         // Next, read timestamp
-        int toRead = bitsToRead();
+        int readInstruction = in.nextClearBit(4);
+        long deltaDelta;
 
-        // TODO This could be a switch clause also.. if it makes any sense, but there are only
-        // 5 options.
-        if (toRead > 0) {
-            long deltaDelta = in.getLong(toRead);
-
-            // TODO Remove with smarter ranges?
-            if(toRead == 32) {
+        switch(readInstruction) {
+            case 0x00:
+                storedTimestamp = storedDelta + storedTimestamp;
+                return;
+            case 0x02:
+                deltaDelta = in.getLong(7);
+                break;
+            case 0x06:
+                deltaDelta = in.getLong(9);
+                break;
+            case 0x0e:
+                deltaDelta = in.getLong(12);
+                break;
+            case 0x0F:
+                deltaDelta = in.getLong(32);
+                // For storage save.. if this is the last available word, check if remaining bits are all 1
                 if ((int) deltaDelta == 0xFFFFFFFF) {
                     // End of stream
                     endOfStream = true;
                     return;
                 }
-            }
-//            else {
-//                // TODO Remove with zigZagging
-//                // Turn "unsigned" long value back to signed one
-//                if(deltaDelta > (1 << (toRead - 1))) {
-//                    deltaDelta -= (1 << toRead);
-//                }
-//            }
-
-            deltaDelta++;
-            deltaDelta = decodeZigZag32((int) deltaDelta);
-            storedDelta = storedDelta + deltaDelta;
+                break;
+            default:
+                return;
         }
+
+        deltaDelta++;
+        deltaDelta = decodeZigZag32((int) deltaDelta);
+        storedDelta = storedDelta + deltaDelta;
 
         storedTimestamp = storedDelta + storedTimestamp;
     }
@@ -167,18 +146,6 @@ public class Decompressor2 {
      * @return A signed 32-bit integer.
      */
     public static int decodeZigZag32(final int n) {
-        return (n >>> 1) ^ -(n & 1);
-    }
-    /**
-     * Decode a ZigZag-encoded 64-bit value. ZigZag encodes signed integers into values that can be
-     * efficiently encoded with varint. (Otherwise, negative values must be sign-extended to 64 bits
-     * to be varint encoded, thus always taking 10 bytes on the wire.)
-     *
-     * @param n An unsigned 64-bit integer, stored in a signed int because Java has no explicit
-     *     unsigned support.
-     * @return A signed 64-bit integer.
-     */
-    public static long decodeZigZag64(final long n) {
         return (n >>> 1) ^ -(n & 1);
     }
 

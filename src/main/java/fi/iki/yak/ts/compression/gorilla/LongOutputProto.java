@@ -108,10 +108,6 @@ public class LongOutputProto implements BitOutput2 {
      * @param bits How many bits are stored to the stream
      */
     public void writeBits(long value, int bits) {
-        // TODO Could turn this to a branchless switch also .. worth it? Compare bits & bitsLeft first and then
-        // a switch clause for -1 and 0
-        // At least predictable speed..
-
         if(bits <= bitsLeft) {
             int lastBitPosition = bitsLeft - bits;
             lB |= (value << lastBitPosition) & MASK_ARRAY[bitsLeft - 1];
@@ -119,7 +115,7 @@ public class LongOutputProto implements BitOutput2 {
             checkAndFlipByte(); // We could be at 0 bits left because of the <= condition .. would it be faster with
                                 // the other one?
         } else {
-            value &= MASK_ARRAY[bits - 1]; // TODO turn to unsigned first - but we don't want that in the future
+            value &= MASK_ARRAY[bits - 1];
             int firstBitPosition = bits - bitsLeft;
             lB |= value >>> firstBitPosition;
             bits -= bitsLeft;
