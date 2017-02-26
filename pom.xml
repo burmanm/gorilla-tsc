@@ -22,7 +22,7 @@
         <junit.jupiter.version>5.0.0-M3</junit.jupiter.version>
         <junit.platform.version>1.0.0-M3</junit.platform.version>
         <!--<junit.vintage.version>4.12.0-M2</junit.vintage.version>-->
-        <jmh.version>1.13</jmh.version>
+        <jmh.version>1.17.5</jmh.version>
         <jar.name>benchmark</jar.name>
         <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
     </properties>
@@ -57,13 +57,7 @@
             <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
-        <!-- This is only needed for IntelliJ bug, IDEA-158667 -->
         <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <version>${junit.vintage.version}</version>
-            <scope>test</scope>
-        </dependency>        <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
             <version>${jmh.version}</version>
