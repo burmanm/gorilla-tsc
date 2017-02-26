@@ -79,7 +79,7 @@ public class Compressor {
         // These are selected to test interoperability and correctness of the solution, this can be read with go-tsz
         out.writeBits(0x0F, 4);
         out.writeBits(0xFFFFFFFF, 32);
-        out.writeBit(false);
+        out.skipBit();
         out.flush();
     }
 
@@ -98,7 +98,7 @@ public class Compressor {
 
         // If delta is zero, write single 0 bit
         if(deltaD == 0) {
-            out.writeBit(false);
+            out.skipBit();
         } else if(deltaD >= -63 && deltaD <= 64) {
             out.writeBits(0x02, 2); // store '10'
             out.writeBits(deltaD, 7); // Using 7 bits, store the value..
@@ -123,7 +123,7 @@ public class Compressor {
 
         if(xor == 0) {
             // Write 0
-            out.writeBit(false);
+            out.skipBit();
         } else {
             int leadingZeros = Long.numberOfLeadingZeros(xor);
             int trailingZeros = Long.numberOfTrailingZeros(xor);
@@ -134,7 +134,7 @@ public class Compressor {
             }
 
             // Store bit '1'
-            out.writeBit(true);
+            out.writeBit();
 
             if(leadingZeros >= storedLeadingZeros && trailingZeros >= storedTrailingZeros) {
                 writeExistingLeading(xor);
@@ -153,7 +153,7 @@ public class Compressor {
      * @param xor XOR between previous value and current
      */
     private void writeExistingLeading(long xor) {
-        out.writeBit(false);
+        out.skipBit();
         int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
         out.writeBits(xor >>> storedTrailingZeros, significantBits);
     }
@@ -169,7 +169,7 @@ public class Compressor {
      * @param trailingZeros New trailing zeros
      */
     private void writeNewLeading(long xor, int leadingZeros, int trailingZeros) {
-        out.writeBit(true);
+        out.writeBit();
         out.writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
 
         int significantBits = 64 - leadingZeros - trailingZeros;

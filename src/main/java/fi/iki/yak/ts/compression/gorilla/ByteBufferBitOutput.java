@@ -50,15 +50,15 @@ public class ByteBufferBitOutput implements BitOutput {
         }
     }
 
-    /**
-     * Sets the next bit (or not) and moves the bit pointer.
-     *
-     * @param bit true == 1 or false == 0
-     */
-    public void writeBit(boolean bit) {
-        if(bit) {
-            b |= (1 << (bitsLeft - 1));
-        }
+    @Override
+    public void writeBit() {
+        b |= (1 << (bitsLeft - 1));
+        bitsLeft--;
+        flipByte();
+    }
+
+    @Override
+    public void skipBit() {
         bitsLeft--;
         flipByte();
     }

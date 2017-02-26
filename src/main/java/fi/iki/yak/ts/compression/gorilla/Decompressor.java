@@ -58,18 +58,7 @@ public class Decompressor {
     }
 
     private int bitsToRead() {
-        int val = 0x00;
-
-        for(int i = 0; i < 4; i++) {
-            val <<= 1;
-            boolean bit = in.readBit();
-            if(bit) {
-                val |= 0x01;
-            } else {
-                break;
-            }
-        }
-
+        int val = in.nextClearBit(4);
         int toRead = 0;
 
         switch(val) {

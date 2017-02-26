@@ -8,10 +8,14 @@ package fi.iki.yak.ts.compression.gorilla;
 public interface BitOutput {
 
     /**
-     * Stores a single bit, set if true, false otherwise.
-     * @param bit false == 0, true == 1
+     * Stores a single bit and increases the bitcount by 1
      */
-    void writeBit(boolean bit);
+    void writeBit();
+
+    /**
+     * Stores a 0 and increases the bitcount by 1
+     */
+    void skipBit();
 
     /**
      * Write the given long value using the defined amount of least significant bits.
