@@ -1,6 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
@@ -10,8 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import org.junit.jupiter.api.Test;
 
 /**
  * These are generic tests to test that input matches the output after compression + decompression cycle, using
@@ -19,16 +19,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  *
  * @author Michael Burman
  */
-public class EncodeTest {
+public class EncodeGorillaTest {
 
     @Test
     void simpleEncodeAndDecodeTest() throws Exception {
         long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        LongArrayOutput output = new LongArrayOutput();
 
-        Compressor c = new Compressor(now, output);
+        GorillaCompressor c = new GorillaCompressor(now, output);
 
         Pair[] pairs = {
                 new Pair(now + 10, Double.doubleToRawLongBits(1.0)),
@@ -44,13 +44,10 @@ public class EncodeTest {
         Arrays.stream(pairs).forEach(p -> c.addValue(p.getTimestamp(), p.getDoubleValue()));
         c.close();
 
-        ByteBuffer byteBuffer = output.getByteBuffer();
-        byteBuffer.flip();
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor d = new GorillaDecompressor(input);
 
-        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
-
-        // Replace with stream once decompressor supports it
+        // Replace with stream once GorillaDecompressor supports it
         for(int i = 0; i < pairs.length; i++) {
             Pair pair = d.readPair();
             assertEquals(pairs[i].getTimestamp(), pair.getTimestamp(), "Timestamp did not match");
@@ -67,8 +64,8 @@ public class EncodeTest {
     void testEncodeSimilarFloats() throws Exception {
         long now = LocalDateTime.of(2015, Month.MARCH, 02, 00, 00).toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
-        Compressor c = new Compressor(now, output);
+        LongArrayOutput output = new LongArrayOutput();
+        GorillaCompressor c = new GorillaCompressor(now, output);
 
         ByteBuffer bb = ByteBuffer.allocate(5 * 2*Long.BYTES);
 
@@ -93,13 +90,10 @@ public class EncodeTest {
 
         bb.flip();
 
-        ByteBuffer byteBuffer = output.getByteBuffer();
-        byteBuffer.flip();
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor d = new GorillaDecompressor(input);
 
-        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
-
-        // Replace with stream once decompressor supports it
+        // Replace with stream once GorillaDecompressor supports it
         for(int i = 0; i < 5; i++) {
             Pair pair = d.readPair();
             assertEquals(bb.getLong(), pair.getTimestamp(), "Timestamp did not match");
@@ -109,7 +103,7 @@ public class EncodeTest {
     }
 
     /**
-     * Tests writing enough large amount of datapoints that causes the included ByteBufferBitOutput to do
+     * Tests writing enough large amount of datapoints that causes the included LongArrayOutput to do
      * internal byte array expansion.
      */
     @Test
@@ -118,7 +112,7 @@ public class EncodeTest {
         int amountOfPoints = 100000;
         long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        LongArrayOutput output = new LongArrayOutput();
 
         long now = blockStart + 60;
         ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);
@@ -128,7 +122,7 @@ public class EncodeTest {
             bb.putDouble(i * Math.random());
         }
 
-        Compressor c = new Compressor(blockStart, output);
+        GorillaCompressor c = new GorillaCompressor(blockStart, output);
 
         bb.flip();
 
@@ -140,11 +134,8 @@ public class EncodeTest {
 
         bb.flip();
 
-        ByteBuffer byteBuffer = output.getByteBuffer();
-        byteBuffer.flip();
-
-        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor d = new GorillaDecompressor(input);
 
         for(int i = 0; i < amountOfPoints; i++) {
             long tStamp = bb.getLong();
@@ -164,16 +155,13 @@ public class EncodeTest {
         long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        LongArrayOutput output = new LongArrayOutput();
 
-        Compressor c = new Compressor(now, output);
+        GorillaCompressor c = new GorillaCompressor(now, output);
         c.close();
 
-        ByteBuffer byteBuffer = output.getByteBuffer();
-        byteBuffer.flip();
-
-        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor d = new GorillaDecompressor(input);
 
         assertNull(d.readPair());
     }
@@ -187,7 +175,7 @@ public class EncodeTest {
         int amountOfPoints = 10000;
         long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
                 .toInstant(ZoneOffset.UTC).toEpochMilli();
-        ByteBufferBitOutput output = new ByteBufferBitOutput();
+        LongArrayOutput output = new LongArrayOutput();
 
         long now = blockStart + 60;
         ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);
@@ -197,7 +185,7 @@ public class EncodeTest {
             bb.putLong(ThreadLocalRandom.current().nextLong(Integer.MAX_VALUE));
         }
 
-        Compressor c = new Compressor(blockStart, output);
+        GorillaCompressor c = new GorillaCompressor(blockStart, output);
 
         bb.flip();
 
@@ -209,11 +197,8 @@ public class EncodeTest {
 
         bb.flip();
 
-        ByteBuffer byteBuffer = output.getByteBuffer();
-        byteBuffer.flip();
-
-        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-        Decompressor d = new Decompressor(input);
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor d = new GorillaDecompressor(input);
 
         for(int i = 0; i < amountOfPoints; i++) {
             long tStamp = bb.getLong();

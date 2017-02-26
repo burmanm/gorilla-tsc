@@ -1,7 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
 /**
- * Decompresses a compressed stream done created by the Compressor. Returns pairs of timestamp and flaoting point value.
+ * Decompresses a compressed stream created by the Compressor. Returns pairs of timestamp and floating point value.
  *
  * @author Michael Burman
  */
