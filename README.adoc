@@ -15,6 +15,9 @@ This is Java based implementation of the compression methods described in the pa
 In comparison to the original paper, this implementation allows using both integer values (`long`) as well as
 floating point values (`double`), both 64 bit in length.
 
+Versions 1.x and 2.x are not compatible with each other due to small differences to the stored array. Versions 2.x
+will support reading and storing older format also, see usage for more details.
+
 == Usage
 
 The included tests are a good source for examples.
@@ -24,24 +27,28 @@ The included tests are a good source for examples.
 [source, xml]
 ----
     <dependency>
-        <groupId>fi.iki.yak.ts.compression</groupId>
+        <groupId>fi.iki.yak</groupId>
         <artifactId>compression-gorilla</artifactId>
-        <version>${version.compression-gorilla}</version>
     </dependency>
 ----
 
+You can find latest version from the maven logo link above.
+
 === Compressing
+
+To compress in the older 1.x format, use class ``Compressor``. For 2.x, use ``GorillaCompressor`` (recommended).
+``ByteBufferLongOutput`` is also recommended compared to ``ByteBufferBitOutput`` because of performance.
 
 [source, java]
 ----
 long now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS)
         .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-ByteBufferBitOutput output = new ByteBufferBitOutput();
-Compressor c = new Compressor(now, output);
+ByteBufferLongOutput output = new ByteBufferLongOutput();
+GorillaCompressor c = new GorillaCompressor(now, output);
 ----
 
-Compression class requires a block timestamp and an implementation of `BitOutput` interface. `ByteBufferBitOutput` is an in-memory example that uses off-heap storage.
+Compression class requires a block timestamp and an implementation of `BitOutput` interface. `ByteBufferLongOutput` is an in-memory example that uses off-heap storage.
 
 [source, java]
 ----
@@ -50,6 +57,15 @@ c.addValue(long, double);
 
 Adds a new floating-point value to the time series. If you wish to store only long values, use `c.addValue(long,
 long)`, however do `not` mix these in the same series.
+
+One can also use Java 8 streaming (available only in 2.x format):
+
+[source, java]
+----
+Stream<Pair> stream = ...;
+c.compressLongStream(stream);
+----
+
 After the block is ready, remember to call
 
 [source, java]
@@ -61,13 +77,19 @@ which flushes the remaining data to the stream and writes closing information.
 
 === Decompressing
 
+To decompress from the older 1.x format, use class ``Decompressor``. For 2.x, use ``GorillaDecompressor`` (recommended).
+``ByteBufferLongInput`` is also recommended compared to ``ByteBufferBitInput`` because of performance if the 2.x
+format was used to compress the time series.
+
 [source, java]
 ----
-ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
-Decompressor d = new Decompressor(input);
+ByteBufferLongInput input = new ByteBufferLongInput(byteBuffer);
+GorillaDecompressor d = new GorillaDecompressor(input);
 ----
 
-To decompress a stream of bytes, supply `Decompressor` with a suitable implementation of `BitInput` interface. The ByteBufferBitInput allows to decompress a byte array or existing `ByteBuffer` presentation.
+To decompress a stream of bytes, supply `GorillaDecompressor` with a suitable implementation of `BitInput` interface.
+ The ByteBufferLongInput allows to decompress a long array or existing `ByteBuffer` presentation with 8 byte word
+ length.
 
 [source, java]
 ----
@@ -77,18 +99,31 @@ Pair pair = d.readPair();
 Requesting next pair with `readPair()` returns the following series value or a `null` once the series is completely
 read. The pair is a simple placeholder object with `getTimestamp()` and `getDoubleValue()` or `getLongValue()`.
 
+For Java 8 streams support, use the following syntax (available only in 2.x format):
+
+[source, java]
+----
+----
+
+== Performance
+
 == Internals
+
+=== Differences to the original paper
+
+* Maximum number of leadingZeros is stored with 6 bits to allow up to 63 leading zeros, which are necessary when
+storing long values.
+* Timestamp delta-of-delta are stored by first turning them with ZigZag encoding to positive integers and then
+reduced by one to fit in the necessary bits. In the decoding phase all the values are incremented by one to fetch the
+ original value.
+* The compressed blocks are created with a 27 bit delta header (unlike in the original paper, which uses a 14 bit delta
+  header). This allows to use up to one day block size using millisecond precision.
 
 === Data structure
 
 Values must be inserted in the increasing time order, out-of-order insertions are not supported.
 
 The included ByteBufferBitInput and ByteBufferBitOutput classes use a big endian order for the data.
-
-=== Block size
-
-The compressed blocks are created with a 27 bit header (unlike in the original paper, which uses a 14 bit delta header). This allows to
-use up to one day block size using millisecond precision.
 
 == Contributing
 
