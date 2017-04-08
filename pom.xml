@@ -19,10 +19,10 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <junit.jupiter.version>5.0.0-M3</junit.jupiter.version>
-        <junit.platform.version>1.0.0-M3</junit.platform.version>
+        <junit.jupiter.version>5.0.0-M4</junit.jupiter.version>
+        <junit.platform.version>1.0.0-M4</junit.platform.version>
         <!--<junit.vintage.version>4.12.0-M2</junit.vintage.version>-->
-        <jmh.version>1.17.5</jmh.version>
+        <jmh.version>1.18</jmh.version>
         <jar.name>benchmark</jar.name>
         <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
     </properties>

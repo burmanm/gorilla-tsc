@@ -1,7 +1,5 @@
 package fi.iki.yak.ts.compression.gorilla;
 
-import java.util.stream.Stream;
-
 /**
  * Implements a slightly modified version of the time series compression as described in the Facebook's Gorilla
  * Paper.
@@ -32,13 +30,13 @@ public class GorillaCompressor {
         addHeader(timestamp);
     }
 
-    public void compressLongStream(Stream<Pair> stream) {
-        stream.peek(p -> writeFirst(p.getTimestamp(), Double.doubleToRawLongBits(p.getDoubleValue()))).skip(1)
-                .forEach(p -> {
-                    compressTimestamp(p.getTimestamp());
-                    compressValue(p.getLongValue());
-                });
-    }
+//    public void compressLongStream(Stream<Pair> stream) {
+//        stream.peek(p -> writeFirst(p.getTimestamp(), Double.doubleToRawLongBits(p.getDoubleValue()))).skip(1)
+//                .forEach(p -> {
+//                    compressTimestamp(p.getTimestamp());
+//                    compressValue(p.getLongValue());
+//                });
+//    }
 
     private void addHeader(long timestamp) {
         out.writeBits(timestamp, 64);
