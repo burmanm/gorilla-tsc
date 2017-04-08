@@ -136,12 +136,12 @@ There were few things I wanted to get to 2.0.0, but had to decide against due to
 === Differences to the original paper
 
 * Maximum number of leadingZeros is stored with 6 bits to allow up to 63 leading zeros, which are necessary when
-storing long values.
+storing long values. (>= 2.0.0)
 * Timestamp delta-of-delta are stored by first turning them with ZigZag encoding to positive integers and then
 reduced by one to fit in the necessary bits. In the decoding phase all the values are incremented by one to fetch the
- original value.
+ original value. (>= 2.0.0)
 * The compressed blocks are created with a 27 bit delta header (unlike in the original paper, which uses a 14 bit delta
-  header). This allows to use up to one day block size using millisecond precision.
+  header). This allows to use up to one day block size using millisecond precision. (>= 1.0.0)
 
 === Data structure
 
