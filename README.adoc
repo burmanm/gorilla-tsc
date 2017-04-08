@@ -58,15 +58,7 @@ c.addValue(long, double);
 Adds a new floating-point value to the time series. If you wish to store only long values, use `c.addValue(long,
 long)`, however do `not` mix these in the same series.
 
-One can also use Java 8 streaming (available only in 2.x format):
-
-[source, java]
-----
-Stream<Pair> stream = ...;
-c.compressLongStream(stream);
-----
-
-After the block is ready, remember to call
+After the block is ready, remember to call:
 
 [source, java]
 ----
@@ -99,13 +91,45 @@ Pair pair = d.readPair();
 Requesting next pair with `readPair()` returns the following series value or a `null` once the series is completely
 read. The pair is a simple placeholder object with `getTimestamp()` and `getDoubleValue()` or `getLongValue()`.
 
-For Java 8 streams support, use the following syntax (available only in 2.x format):
-
-[source, java]
-----
-----
-
 == Performance
+
+The following performance in reached in a Linux VM running on VMware Player in Windows 8.1 host. i7 2600K at 4GHz.
+The benchmark used is the ``EncodingBenchmark``. These results should not be directly compared to other
+implementations unless similar dataset is used.
+
+Results are in millions of datapoints (timestamp + value) pairs per second. The values in this benchmark are
+in doubles (performance with longs is slightly higher, around ~2-3M/s).
+
+.Compression
+|===
+|GorillaCompressor (2.0.0) |Compressor (1.1.0)
+
+|83.5M/s (~1.34GB/s)
+|31.2M/s (~499MB/s)
+|===
+
+
+.Decompression
+|===
+|GorillaDecompressor (2.0.0) |Decompressor (1.1.0)
+
+|77,9M/s (~1.25GB/s)
+|51.4M/s (~822MB/s)
+|===
+
+Most of the differences in decompression / compression speed between versions come from implementation changes and
+not from the small changes to the output format.
+
+== Roadmap
+
+There were few things I wanted to get to 2.0.0, but had to decide against due to lack of time. I will implement these
+ later with potentially some breaking API changes:
+
+ * Support timestamp only and value only compressions (2.1.x)
+ * Support for Java 8 streams in decompression and compression API (2.1.x)
+ * Change delta-of-delta ranges based on some real-world results when using millisecond resolution (3.0.x)
+ * Move bit operations to inside the GorillaCompressor/GorillaDecompressor to allow easier usage with for example
+ Netty's ByteBuf and allocator. (3.0.x)
 
 == Internals
 
@@ -127,12 +151,12 @@ The included ByteBufferBitInput and ByteBufferBitOutput classes use a big endian
 
 == Contributing
 
-File an issue and/or send a push request.
+File an issue and/or send a pull request.
 
 === License
 
 ....
-   Copyright 2016 Michael Burman and/or other contributors.
+   Copyright 2016-2017 Michael Burman and/or other contributors.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
