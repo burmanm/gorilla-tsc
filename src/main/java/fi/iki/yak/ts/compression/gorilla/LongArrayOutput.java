@@ -9,9 +9,10 @@ public class LongArrayOutput implements BitOutput {
     public static final int DEFAULT_ALLOCATION =  4096*32;
 
     private long[] longArray;
-    private long lB;
     private int position = 0;
-    private int bitsLeft = Long.SIZE;
+
+    protected long lB;
+    protected int bitsLeft = Long.SIZE;
 
     public final static long[] MASK_ARRAY;
     public final static long[] BIT_SET_MASK;
@@ -52,7 +53,7 @@ public class LongArrayOutput implements BitOutput {
         lB = longArray[position];
     }
 
-    private void expandAllocation() {
+    protected void expandAllocation() {
         long[] largerArray = new long[longArray.length*2];
         System.arraycopy(longArray, 0, largerArray, 0, longArray.length);
         longArray = largerArray;
@@ -61,24 +62,29 @@ public class LongArrayOutput implements BitOutput {
     private void checkAndFlipByte() {
         // Wish I could avoid this check in most cases...
         if(bitsLeft == 0) {
-            flipByte();
+            flipWord();
         }
     }
 
-    private void flipByte() {
-        longArray[position] = lB;
-        ++position;
-        if(position >= (longArray.length - 2)) { // We want to have always at least 2 longs available
+    protected int capacityLeft() {
+        return longArray.length - position;
+    }
+
+    protected void flipWord() {
+        flipWordWithoutExpandCheck();
+        if(capacityLeft() <= 2) { // We want to have always at least 2 longs available
             expandAllocation();
         }
-        lB = 0;
-        bitsLeft = Long.SIZE;
     }
 
-    private void flipByteWithoutExpandCheck() {
+    protected void flipWordWithoutExpandCheck() {
         longArray[position] = lB;
         ++position;
-        lB = 0; // Do I need even this?
+        resetInternalWord();
+    }
+
+    private void resetInternalWord() {
+        lB = 0;
         bitsLeft = Long.SIZE;
     }
 
@@ -116,7 +122,7 @@ public class LongArrayOutput implements BitOutput {
             int firstBitPosition = bits - bitsLeft;
             lB |= value >>> firstBitPosition;
             bits -= bitsLeft;
-            flipByteWithoutExpandCheck();
+            flipWordWithoutExpandCheck();
             lB |= value << (64 - bits);
             bitsLeft -= bits;
         }
@@ -127,7 +133,7 @@ public class LongArrayOutput implements BitOutput {
      */
     @Override
     public void flush() {
-        flipByte(); // Causes write to the ByteBuffer
+        flipWord(); // Causes write to the ByteBuffer
     }
 
     public void reset() {
