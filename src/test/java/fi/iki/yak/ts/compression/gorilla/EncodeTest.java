@@ -8,10 +8,14 @@ import java.time.Month;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * These are generic tests to test that input matches the output after compression + decompression cycle, using
@@ -223,5 +227,34 @@ public class EncodeTest {
             assertEquals(val, pair.getLongValue());
         }
         assertNull(d.readPair());
+    }
+
+    @Test
+    void testIssue11() {
+        long now = System.currentTimeMillis();
+        LongArrayOutput output = new LongArrayOutput(500);
+        GorillaCompressor c = new GorillaCompressor(LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS).
+                toInstant(ZoneOffset.UTC).toEpochMilli(), output);
+
+        Map<Long, Double> dps = new TreeMap<>();
+        int n = 3600;
+        Random r = new Random();
+        for(int i=0; i<n; i++) {
+            dps.put(now + (1000 * i) + r.nextInt(100), 100.0);
+        }
+
+        for(Map.Entry<Long, Double> entry : dps.entrySet()) {
+            c.addValue(entry.getKey(), entry.getValue());
+        }
+        c.close();
+
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor dc = new GorillaDecompressor(input);
+
+        Pair pair = dc.readPair();
+        while(pair != null) {
+            assertTrue(dps.containsKey(pair.getTimestamp()), "Datapoint was missing");
+            pair = dc.readPair();
+        }
     }
 }

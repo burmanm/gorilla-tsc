@@ -71,10 +71,10 @@ public class LongArrayOutput implements BitOutput {
     }
 
     protected void flipWord() {
-        flipWordWithoutExpandCheck();
         if(capacityLeft() <= 2) { // We want to have always at least 2 longs available
             expandAllocation();
         }
+        flipWordWithoutExpandCheck();
     }
 
     protected void flipWordWithoutExpandCheck() {
@@ -122,7 +122,7 @@ public class LongArrayOutput implements BitOutput {
             int firstBitPosition = bits - bitsLeft;
             lB |= value >>> firstBitPosition;
             bits -= bitsLeft;
-            flipWordWithoutExpandCheck();
+            flipWord();
             lB |= value << (64 - bits);
             bitsLeft -= bits;
         }
