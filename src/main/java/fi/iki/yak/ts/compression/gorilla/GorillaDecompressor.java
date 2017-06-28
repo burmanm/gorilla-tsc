@@ -51,7 +51,6 @@ public class GorillaDecompressor {
         }
 
         nextTimestamp();
-        nextValue();
     }
 
     private void first() {
@@ -73,6 +72,7 @@ public class GorillaDecompressor {
         switch(readInstruction) {
             case 0x00:
                 storedTimestamp = storedDelta + storedTimestamp;
+                nextValue();
                 return;
             case 0x02:
                 deltaDelta = in.getLong(7);
@@ -101,6 +101,7 @@ public class GorillaDecompressor {
         storedDelta = storedDelta + deltaDelta;
 
         storedTimestamp = storedDelta + storedTimestamp;
+        nextValue();
     }
 
     private void nextValue() {

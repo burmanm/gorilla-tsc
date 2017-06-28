@@ -53,7 +53,6 @@ public class Decompressor {
             storedTimestamp = blockTimestamp + storedDelta;
         } else {
             nextTimestamp();
-            nextValue();
         }
     }
 
@@ -106,6 +105,7 @@ public class Decompressor {
 
         storedDelta = storedDelta + deltaDelta;
         storedTimestamp = storedDelta + storedTimestamp;
+        nextValue();
     }
 
     private void nextValue() {

@@ -182,9 +182,6 @@ public class EncodeTest {
         assertNull(d.readPair());
     }
 
-    /**
-     * Long values should be compressable and decompressable in the stream
-     */
     @Test
     void testLongEncoding() throws Exception {
         // This test should trigger ByteBuffer reallocation
@@ -227,34 +224,5 @@ public class EncodeTest {
             assertEquals(val, pair.getLongValue());
         }
         assertNull(d.readPair());
-    }
-
-    @Test
-    void testIssue11() {
-        long now = System.currentTimeMillis();
-        LongArrayOutput output = new LongArrayOutput(500);
-        GorillaCompressor c = new GorillaCompressor(LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS).
-                toInstant(ZoneOffset.UTC).toEpochMilli(), output);
-
-        Map<Long, Double> dps = new TreeMap<>();
-        int n = 3600;
-        Random r = new Random();
-        for(int i=0; i<n; i++) {
-            dps.put(now + (1000 * i) + r.nextInt(100), 100.0);
-        }
-
-        for(Map.Entry<Long, Double> entry : dps.entrySet()) {
-            c.addValue(entry.getKey(), entry.getValue());
-        }
-        c.close();
-
-        LongArrayInput input = new LongArrayInput(output.getLongArray());
-        GorillaDecompressor dc = new GorillaDecompressor(input);
-
-        Pair pair = dc.readPair();
-        while(pair != null) {
-            assertTrue(dps.containsKey(pair.getTimestamp()), "Datapoint was missing");
-            pair = dc.readPair();
-        }
     }
 }
