@@ -147,6 +147,50 @@ public class EncodeGorillaTest {
         assertNull(d.readPair());
     }
 
+    @Test
+    void testEncodeLargeAmountOfDataOldBuffer() throws Exception {
+        // This test should trigger ByteBuffer reallocation
+        int amountOfPoints = 100000;
+        long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
+                .toInstant(ZoneOffset.UTC).toEpochMilli();
+        ByteBufferBitOutput output = new ByteBufferBitOutput();
+
+        long now = blockStart + 60;
+        ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);
+
+        for(int i = 0; i < amountOfPoints; i++) {
+            bb.putLong(now + i*60);
+            bb.putDouble(i * Math.random());
+        }
+
+        GorillaCompressor c = new GorillaCompressor(blockStart, output);
+
+        bb.flip();
+
+        for(int j = 0; j < amountOfPoints; j++) {
+            c.addValue(bb.getLong(), bb.getDouble());
+        }
+
+        c.close();
+
+        bb.flip();
+
+        ByteBuffer byteBuffer = output.getByteBuffer();
+        byteBuffer.flip();
+
+        ByteBufferBitInput input = new ByteBufferBitInput(byteBuffer);
+        GorillaDecompressor d = new GorillaDecompressor(input);
+
+        for(int i = 0; i < amountOfPoints; i++) {
+            long tStamp = bb.getLong();
+            double val = bb.getDouble();
+            Pair pair = d.readPair();
+            assertEquals(tStamp, pair.getTimestamp(), "Expected timestamp did not match at point " + i);
+            assertEquals(val, pair.getDoubleValue());
+        }
+        assertNull(d.readPair());
+    }
+
     /**
      * Although not intended usage, an empty block should not cause errors
      */
