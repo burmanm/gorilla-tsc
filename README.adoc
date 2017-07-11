@@ -128,8 +128,9 @@ There were few things I wanted to get to 2.0.0, but had to decide against due to
  * Support timestamp only and value only compressions (2.1.x)
  * Support for Java 8 streams in decompression and compression API (2.1.x)
  * Change delta-of-delta ranges based on some real-world results when using millisecond resolution (3.0.x)
- * Move bit operations to inside the GorillaCompressor/GorillaDecompressor to allow easier usage with for example
- Netty's ByteBuf and allocator. (3.0.x)
+ * Move bit operations to inside the GorillaCompressor/GorillaDecompressor to allow easier usage with
+ Netty's ByteBuf and allocator (or Agrona etc). (3.0.x)
+   ** Example for Netty: https://gist.github.com/burmanm/d6ad33089aaf78104d5f0f7977f097ce
 
 == Internals
 
