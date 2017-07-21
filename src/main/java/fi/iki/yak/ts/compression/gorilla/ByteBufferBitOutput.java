@@ -71,16 +71,17 @@ public class ByteBufferBitOutput implements BitOutput {
      */
     public void writeBits(long value, int bits) {
         while(bits > 0) {
-            int bitsToWrite = (bits > bitsLeft) ? bitsLeft : bits;
-            if(bits > bitsLeft) {
-                int shift = bits - bitsLeft;
+            int shift = bits - bitsLeft;
+            if(shift >= 0) {
                 b |= (byte) ((value >> shift) & ((1 << bitsLeft) - 1));
+                bits -= bitsLeft;
+                bitsLeft = 0;
             } else {
-                int shift = bitsLeft - bits;
+                shift = bitsLeft - bits;
                 b |= (byte) (value << shift);
+                bitsLeft -= bits;
+                bits = 0;
             }
-            bits -= bitsToWrite;
-            bitsLeft -= bitsToWrite;
             flipByte();
         }
     }
