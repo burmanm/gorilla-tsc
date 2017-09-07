@@ -1,5 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
+import fi.iki.yak.ts.compression.gorilla.predictors.LastValuePredictor;
+
 /**
  * Implements a slightly modified version of the time series compression as described in the Facebook's Gorilla
  * Paper.
@@ -8,9 +10,6 @@ package fi.iki.yak.ts.compression.gorilla;
  */
 public class GorillaCompressor {
 
-    private int storedLeadingZeros = Integer.MAX_VALUE;
-    private int storedTrailingZeros = 0;
-    private long storedVal = 0;
     private long storedTimestamp = 0;
     private int storedDelta = 0;
 
@@ -24,19 +23,18 @@ public class GorillaCompressor {
 
     private BitOutput out;
 
+    private ValueCompressor valueCompressor;
+
     public GorillaCompressor(long timestamp, BitOutput output) {
+        this(timestamp, output, new LastValuePredictor());
+    }
+
+    public GorillaCompressor(long timestamp, BitOutput output, Predictor predictor) {
         blockTimestamp = timestamp;
         out = output;
         addHeader(timestamp);
+        this.valueCompressor = new ValueCompressor(output, predictor);
     }
-
-//    public void compressLongStream(Stream<Pair> stream) {
-//        stream.peek(p -> writeFirst(p.getTimestamp(), Double.doubleToRawLongBits(p.getDoubleValue()))).skip(1)
-//                .forEach(p -> {
-//                    compressTimestamp(p.getTimestamp());
-//                    compressValue(p.getLongValue());
-//                });
-//    }
 
     private void addHeader(long timestamp) {
         out.writeBits(timestamp, 64);
@@ -53,7 +51,7 @@ public class GorillaCompressor {
             writeFirst(timestamp, value);
         } else {
             compressTimestamp(timestamp);
-            compressValue(value);
+            valueCompressor.compressValue(value);
         }
     }
 
@@ -69,16 +67,15 @@ public class GorillaCompressor {
             return;
         }
         compressTimestamp(timestamp);
-        compressValue(Double.doubleToRawLongBits(value));
+        valueCompressor.compressValue(Double.doubleToRawLongBits(value));
     }
 
     private void writeFirst(long timestamp, long value) {
         storedDelta = (int) (timestamp - blockTimestamp);
         storedTimestamp = timestamp;
-        storedVal = value;
 
         out.writeBits(storedDelta, FIRST_DELTA_BITS);
-        out.writeBits(storedVal, 64);
+        valueCompressor.writeFirst(value);
     }
 
     /**
@@ -104,8 +101,6 @@ public class GorillaCompressor {
         // a) Calculate the delta of delta
         int newDelta = (int) (timestamp - storedTimestamp);
         int deltaD = newDelta - storedDelta;
-
-        // TODO Fluctuating values will cause always 64 bits write (-2, +2 for example), zigzag could fix it..
 
         if(deltaD == 0) {
             out.skipBit();
@@ -165,65 +160,4 @@ public class GorillaCompressor {
     }
 
     // END: From protobuf
-
-    private void compressValue(long value) {
-       long xor = storedVal ^ value;
-
-        if(xor == 0) {
-            // Write 0
-            out.skipBit();
-        } else {
-            int leadingZeros = Long.numberOfLeadingZeros(xor);
-            int trailingZeros = Long.numberOfTrailingZeros(xor);
-
-            out.writeBit(); // Optimize to writeNewLeading / writeExistingLeading?
-
-            if(leadingZeros >= storedLeadingZeros && trailingZeros >= storedTrailingZeros) {
-                writeExistingLeading(xor);
-            } else {
-                writeNewLeading(xor, leadingZeros, trailingZeros);
-            }
-        }
-
-        storedVal = value;
-    }
-
-    /**
-     * If there at least as many leading zeros and as many trailing zeros as previous value, control bit = 0 (type a)
-     * store the meaningful XORed value
-     *
-     * @param xor XOR between previous value and current
-     */
-    private void writeExistingLeading(long xor) {
-        out.skipBit();
-
-        int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
-        xor >>>= storedTrailingZeros;
-        out.writeBits(xor, significantBits);
-    }
-
-    /**
-     * store the length of the number of leading zeros in the next 5 bits
-     * store length of the meaningful XORed value in the next 6 bits,
-     * store the meaningful bits of the XORed value
-     * (type b)
-     *
-     * @param xor XOR between previous value and current
-     * @param leadingZeros New leading zeros
-     * @param trailingZeros New trailing zeros
-     */
-    private void writeNewLeading(long xor, int leadingZeros, int trailingZeros) {
-        out.writeBit();
-
-        // Different from version 1.x, use (significantBits - 1) in storage - avoids a branch
-        int significantBits = 64 - leadingZeros - trailingZeros;
-
-        // Different from original, bits 5 -> 6, avoids a branch, allows storing small longs
-        out.writeBits(leadingZeros, 6); // Number of leading zeros in the next 6 bits
-        out.writeBits(significantBits - 1, 6); // Length of meaningful bits in the next 6 bits
-        out.writeBits(xor >>> trailingZeros, significantBits); // Store the meaningful bits of XOR
-
-        storedLeadingZeros = leadingZeros;
-        storedTrailingZeros = trailingZeros;
-    }
 }

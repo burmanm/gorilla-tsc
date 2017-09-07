@@ -13,6 +13,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Test;
 
+import fi.iki.yak.ts.compression.gorilla.predictors.DifferentialFCM;
+
 /**
  * These are generic tests to test that input matches the output after compression + decompression cycle, using
  * both the timestamp and value compression.
@@ -521,4 +523,50 @@ public class EncodeGorillaTest {
         }
         assertNull(d.readPair());
     }
+
+    /**
+     * Tests writing enough large amount of datapoints that causes the included LongArrayOutput to do
+     * internal byte array expansion.
+     */
+    @Test
+    void testDifferentialFCM() throws Exception {
+        // This test should trigger ByteBuffer reallocation
+        int amountOfPoints = 100000;
+        long blockStart = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
+                .toInstant(ZoneOffset.UTC).toEpochMilli();
+        LongArrayOutput output = new LongArrayOutput();
+
+        long now = blockStart + 60;
+        ByteBuffer bb = ByteBuffer.allocateDirect(amountOfPoints * 2*Long.BYTES);
+
+        for(int i = 0; i < amountOfPoints; i++) {
+            bb.putLong(now + i*60);
+            bb.putDouble(i * Math.random());
+        }
+
+        GorillaCompressor c = new GorillaCompressor(blockStart, output, new DifferentialFCM(1024));
+
+        bb.flip();
+
+        for(int j = 0; j < amountOfPoints; j++) {
+            c.addValue(bb.getLong(), bb.getDouble());
+        }
+
+        c.close();
+
+        bb.flip();
+
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor d = new GorillaDecompressor(input, new DifferentialFCM(1024));
+
+        for(int i = 0; i < amountOfPoints; i++) {
+            long tStamp = bb.getLong();
+            double val = bb.getDouble();
+            Pair pair = d.readPair();
+            assertEquals(tStamp, pair.getTimestamp(), "Expected timestamp did not match at point " + i);
+            assertEquals(val, pair.getDoubleValue());
+        }
+        assertNull(d.readPair());
+    }
+
 }
