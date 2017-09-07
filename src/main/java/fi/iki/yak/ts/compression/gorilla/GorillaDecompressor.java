@@ -1,27 +1,31 @@
 package fi.iki.yak.ts.compression.gorilla;
 
+import fi.iki.yak.ts.compression.gorilla.predictors.LastValuePredictor;
+
 /**
  * Decompresses a compressed stream created by the GorillaCompressor.
  *
  * @author Michael Burman
  */
 public class GorillaDecompressor {
-
-    private int storedLeadingZeros = Integer.MAX_VALUE;
-    private int storedTrailingZeros = 0;
-    private long storedVal = 0;
     private long storedTimestamp = 0;
     private long storedDelta = 0;
 
     private long blockTimestamp = 0;
-
+    private long storedVal = 0;
     private boolean endOfStream = false;
 
     private BitInput in;
+    private ValueDecompressor decompressor;
 
     public GorillaDecompressor(BitInput input) {
+        this(input, new LastValuePredictor());
+    }
+
+    public GorillaDecompressor(BitInput input, Predictor predictor) {
         in = input;
         readHeader();
+        this.decompressor = new ValueDecompressor(input, predictor);
     }
 
     private void readHeader() {
@@ -60,7 +64,8 @@ public class GorillaDecompressor {
             endOfStream = true;
             return;
         }
-        storedVal = in.getLong(64);
+        storedVal = decompressor.readFirst();
+//        storedVal = in.getLong(64);
         storedTimestamp = blockTimestamp + storedDelta;
     }
 
@@ -72,7 +77,7 @@ public class GorillaDecompressor {
         switch(readInstruction) {
             case 0x00:
                 storedTimestamp = storedDelta + storedTimestamp;
-                nextValue();
+                storedVal = decompressor.nextValue();
                 return;
             case 0x02:
                 deltaDelta = in.getLong(7);
@@ -101,29 +106,7 @@ public class GorillaDecompressor {
         storedDelta = storedDelta + deltaDelta;
 
         storedTimestamp = storedDelta + storedTimestamp;
-        nextValue();
-    }
-
-    private void nextValue() {
-        int val = in.nextClearBit(2);
-
-        switch(val) {
-            case 3:
-                // New leading and trailing zeros
-                storedLeadingZeros = (int) in.getLong(6);
-
-                byte significantBits = (byte) in.getLong(6);
-                significantBits++;
-
-                storedTrailingZeros = 64 - significantBits - storedLeadingZeros;
-                // missing break is intentional, we want to overflow to next one
-            case 2:
-                long value = in.getLong(64 - storedLeadingZeros - storedTrailingZeros);
-                value <<= storedTrailingZeros;
-                value = storedVal ^ value;
-                storedVal = value;
-                break;
-        }
+        storedVal = decompressor.nextValue();
     }
 
     // START: From protobuf
