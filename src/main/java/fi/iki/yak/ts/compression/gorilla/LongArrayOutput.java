@@ -1,5 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
+import java.util.Arrays;
+
 /**
  * An implementation of BitOutput interface that uses on-heap long array.
  *
@@ -35,6 +37,15 @@ public class LongArrayOutput implements BitOutput {
         }
     }
 
+    /*
+     * Creates a deep copy of this object
+     */
+    public LongArrayOutput(LongArrayOutput other) {
+        this.longArray = Arrays.copyOf(other.longArray, other.longArray.length);
+        this.position = other.position;
+        this.lB = other.lB;
+        this.bitsLeft = other.bitsLeft;
+    }
 
     /**
      * Creates a new ByteBufferBitOutput with a default allocated size of 4096 bytes.
