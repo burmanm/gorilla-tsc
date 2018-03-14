@@ -1,5 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
+import java.util.Arrays;
+
 /**
  * An implementation of BitOutput interface that uses on-heap long array.
  *
@@ -136,10 +138,9 @@ public class LongArrayOutput implements BitOutput {
         flipWord();
     }
 
-    /**
-     * Changed in 2.1, returns a reference to the underlying array (no copy anymore)
-     */
     public long[] getLongArray() {
-        return this.longArray;
+        long[] copy = Arrays.copyOf(longArray, position + 1);
+        copy[copy.length - 1] = lB;
+        return copy;
     }
 }

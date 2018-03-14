@@ -1,6 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
@@ -8,14 +9,9 @@ import java.time.Month;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
-import java.util.Map;
-import java.util.Random;
-import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 /**
  * These are generic tests to test that input matches the output after compression + decompression cycle, using

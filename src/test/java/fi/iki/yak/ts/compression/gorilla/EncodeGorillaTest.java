@@ -480,6 +480,25 @@ public class EncodeGorillaTest {
         assertNull(d.readPair());
     }
 
+    @Test
+    void testCopyFlush() {
+        long now = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS)
+                .toInstant(ZoneOffset.UTC).toEpochMilli();
+
+        LongArrayOutput output = new LongArrayOutput();
+
+        GorillaCompressor c = new GorillaCompressor(now, output);
+
+        c.addValue(now + 1, 1.0);
+        c.addValue(now + 2, 1.0);
+
+        LongArrayInput input = new LongArrayInput(output.getLongArray());
+        GorillaDecompressor d = new GorillaDecompressor(input);
+
+        assertEquals(now + 1, d.readPair().getTimestamp());
+        assertEquals(now + 2, d.readPair().getTimestamp());
+    }
+
     /**
      * Long values should be compressable and decompressable in the stream
      */
