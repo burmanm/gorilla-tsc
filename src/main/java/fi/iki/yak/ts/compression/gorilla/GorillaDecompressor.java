@@ -1,5 +1,7 @@
 package fi.iki.yak.ts.compression.gorilla;
 
+import java.util.stream.Stream;
+
 import fi.iki.yak.ts.compression.gorilla.predictors.LastValuePredictor;
 
 /**
@@ -15,8 +17,8 @@ public class GorillaDecompressor {
     private long storedVal = 0;
     private boolean endOfStream = false;
 
-    private BitInput in;
-    private ValueDecompressor decompressor;
+    private final BitInput in;
+    private final ValueDecompressor decompressor;
 
     public GorillaDecompressor(BitInput input) {
         this(input, new LastValuePredictor());
@@ -125,5 +127,4 @@ public class GorillaDecompressor {
     }
 
     // END: From protobuf
-
 }

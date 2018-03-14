@@ -8,8 +8,8 @@ import fi.iki.yak.ts.compression.gorilla.predictors.LastValuePredictor;
  * @author Michael Burman
  */
 public class ValueDecompressor {
-    private BitInput in;
-    private Predictor predictor;
+    private final BitInput in;
+    private final Predictor predictor;
 
     private int storedLeadingZeros = Integer.MAX_VALUE;
     private int storedTrailingZeros = 0;

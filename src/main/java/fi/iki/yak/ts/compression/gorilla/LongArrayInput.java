@@ -22,7 +22,7 @@ package fi.iki.yak.ts.compression.gorilla;
  * @author Michael Burman
  */
 public class LongArrayInput implements BitInput {
-    private long[] longArray; // TODO Investigate also the ByteBuffer performance here.. or Unsafe
+    private final long[] longArray; // TODO Investigate also the ByteBuffer performance here.. or Unsafe
     private long lB;
     private int position = 0;
     private int bitsLeft = 0;

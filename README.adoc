@@ -37,18 +37,20 @@ You can find latest version from the maven logo link above.
 === Compressing
 
 To compress in the older 1.x format, use class ``Compressor``. For 2.x, use ``GorillaCompressor`` (recommended).
-``ByteBufferLongOutput`` is also recommended compared to ``ByteBufferBitOutput`` because of performance.
+``LongArrayOutput`` is also recommended compared to ``ByteBufferBitOutput`` because of performance. One can supply
+alternative predictor to the ``GorillaCompressor`` if required. One such implementation is included,
+``DifferentialFCM`` that provides better compression ratio for some data patterns.
 
 [source, java]
 ----
 long now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS)
         .toInstant(ZoneOffset.UTC).toEpochMilli();
 
-ByteBufferLongOutput output = new ByteBufferLongOutput();
+LongArrayOutput output = new LongArrayOutput();
 GorillaCompressor c = new GorillaCompressor(now, output);
 ----
 
-Compression class requires a block timestamp and an implementation of `BitOutput` interface. `ByteBufferLongOutput` is an in-memory example that uses off-heap storage.
+Compression class requires a block timestamp and an implementation of `BitOutput` interface.
 
 [source, java]
 ----
@@ -70,17 +72,18 @@ which flushes the remaining data to the stream and writes closing information.
 === Decompressing
 
 To decompress from the older 1.x format, use class ``Decompressor``. For 2.x, use ``GorillaDecompressor`` (recommended).
-``ByteBufferLongInput`` is also recommended compared to ``ByteBufferBitInput`` because of performance if the 2.x
-format was used to compress the time series.
+``LongArrayInput`` is also recommended compared to ``ByteBufferBitInput`` because of performance if the 2.x
+format was used to compress the time series. If the original compressor used different predictor than
+``LastValuePredictor`` it must be defined in the constructor.
 
 [source, java]
 ----
-ByteBufferLongInput input = new ByteBufferLongInput(byteBuffer);
+LongArrayInput input = new LongArrayInput(byteBuffer);
 GorillaDecompressor d = new GorillaDecompressor(input);
 ----
 
 To decompress a stream of bytes, supply `GorillaDecompressor` with a suitable implementation of `BitInput` interface.
- The ByteBufferLongInput allows to decompress a long array or existing `ByteBuffer` presentation with 8 byte word
+ The LongArrayInput allows to decompress a long array or existing `ByteBuffer` presentation with 8 byte word
  length.
 
 [source, java]
@@ -125,12 +128,10 @@ not from the small changes to the output format.
 There were few things I wanted to get to 2.0.0, but had to decide against due to lack of time. I will implement these
  later with potentially some breaking API changes:
 
- * Support timestamp only and value only compressions (2.1.x)
- * Support for Java 8 streams in decompression and compression API (2.1.x)
- * Change delta-of-delta ranges based on some real-world results when using millisecond resolution (3.0.x)
+ * Support timestamp only compressions (2.2.x)
+ * Include ByteBufferLongOutput/ByteBufferLongInput in the package (2.2.x)
  * Move bit operations to inside the GorillaCompressor/GorillaDecompressor to allow easier usage with
- Netty's ByteBuf and allocator (or Agrona etc). (3.0.x)
-   ** Example for Netty: https://gist.github.com/burmanm/d6ad33089aaf78104d5f0f7977f097ce
+ other allocators (2.2.x)
 
 == Internals
 
@@ -157,7 +158,7 @@ File an issue and/or send a pull request.
 === License
 
 ....
-   Copyright 2016-2017 Michael Burman and/or other contributors.
+   Copyright 2016-2018 Michael Burman and/or other contributors.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

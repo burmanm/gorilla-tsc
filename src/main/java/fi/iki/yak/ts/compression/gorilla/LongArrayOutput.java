@@ -6,7 +6,7 @@ package fi.iki.yak.ts.compression.gorilla;
  * @author Michael Burman
  */
 public class LongArrayOutput implements BitOutput {
-    public static final int DEFAULT_ALLOCATION =  4096*32;
+    public static final int DEFAULT_ALLOCATION = 256;
 
     private long[] longArray;
     private int position = 0;
@@ -129,22 +129,17 @@ public class LongArrayOutput implements BitOutput {
     }
 
     /**
-     * Causes the currently handled byte to be written to the stream
+     * Causes the currently handled word to be written to the stream
      */
     @Override
     public void flush() {
-        flipWord(); // Causes write to the ByteBuffer
+        flipWord();
     }
 
-    public void reset() {
-        position = 0;
-        bitsLeft = Long.SIZE;
-        lB = 0;
-    }
-
+    /**
+     * Changed in 2.1, returns a reference to the underlying array (no copy anymore)
+     */
     public long[] getLongArray() {
-        long[] copy = new long[position+1];
-        System.arraycopy(longArray, 0, copy, 0, position);
-        return copy;
+        return this.longArray;
     }
 }

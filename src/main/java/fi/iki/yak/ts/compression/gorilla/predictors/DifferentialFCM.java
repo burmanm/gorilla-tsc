@@ -10,7 +10,7 @@ import fi.iki.yak.ts.compression.gorilla.Predictor;
 public class DifferentialFCM implements Predictor {
 
     private long lastValue = 0L;
-    private long[] table;
+    private final long[] table;
     private int lastHash = 0;
 
     private final int mask;
@@ -29,7 +29,7 @@ public class DifferentialFCM implements Predictor {
             this.table = new long[newSize];
             this.mask = newSize - 1;
         } else {
-            throw new IllegalArgumentException("Size must be positive and a power of two");
+            throw new IllegalArgumentException("Size must be positive");
         }
     }
 
