@@ -21,6 +21,20 @@ public class ByteBufferBitOutput implements BitOutput {
         this(DEFAULT_ALLOCATION);
     }
 
+    /*
+     * Creates a deep copy of this object
+     */
+    public ByteBufferBitOutput(ByteBufferBitOutput other) {
+        ByteBuffer otherBB = other.getByteBuffer();
+        this.bb = ByteBuffer.allocateDirect(otherBB.capacity());
+        otherBB.flip();
+        this.bb.put(otherBB);
+        this.bb.limit(bb.capacity());
+        otherBB.limit(otherBB.capacity());
+        this.b = other.b;
+        this.bitsLeft = other.bitsLeft;
+    }
+
     /**
      * Give an initialSize different than DEFAULT_ALLOCATIONS. Recommended to use values which are dividable by 4096.
      *
