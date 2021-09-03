@@ -154,7 +154,7 @@ public class Compressor {
      */
     private void writeExistingLeading(long xor) {
         out.skipBit();
-        int significantBits = 64 - storedLeadingZeros - storedTrailingZeros;
+        int significantBits = Long.SIZE - storedLeadingZeros - storedTrailingZeros;
         out.writeBits(xor >>> storedTrailingZeros, significantBits);
     }
 
@@ -172,7 +172,7 @@ public class Compressor {
         out.writeBit();
         out.writeBits(leadingZeros, 5); // Number of leading zeros in the next 5 bits
 
-        int significantBits = 64 - leadingZeros - trailingZeros;
+        int significantBits = Long.SIZE - leadingZeros - trailingZeros;
         out.writeBits(significantBits, 6); // Length of meaningful bits in the next 6 bits
         out.writeBits(xor >>> trailingZeros, significantBits); // Store the meaningful bits of XOR
 
