@@ -25,7 +25,7 @@ public class Decompressor {
     }
 
     private void readHeader() {
-        blockTimestamp = in.getLong(64);
+        blockTimestamp = in.getLong(Long.SIZE);
     }
 
     /**
@@ -49,7 +49,7 @@ public class Decompressor {
                 endOfStream = true;
                 return;
             }
-            storedVal = in.getLong(64);
+            storedVal = in.getLong(Long.SIZE);
             storedTimestamp = blockTimestamp + storedDelta;
         } else {
             nextTimestamp();
@@ -118,11 +118,11 @@ public class Decompressor {
 
                 byte significantBits = (byte) in.getLong(6);
                 if(significantBits == 0) {
-                    significantBits = 64;
+                    significantBits = Long.SIZE;
                 }
-                storedTrailingZeros = 64 - significantBits - storedLeadingZeros;
+                storedTrailingZeros = Long.SIZE - significantBits - storedLeadingZeros;
             }
-            long value = in.getLong(64 - storedLeadingZeros - storedTrailingZeros);
+            long value = in.getLong(Long.SIZE - storedLeadingZeros - storedTrailingZeros);
             value <<= storedTrailingZeros;
             value = storedVal ^ value;
             storedVal = value;
